@@ -9,3 +9,4 @@ broadcast/
 !.env.example
 *.log
 .DS_Store
+scripts/addresses.env
