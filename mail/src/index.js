@@ -48,6 +48,24 @@ app.post('/code', async (req, res) => {
   }
 })
 
+/**
+ * Deliver a code a node generated.
+ *
+ * The node keeps the commitment and this service never sees it — the split is between who
+ * generates and who delivers, so a compromised mailbox and a compromised node are two
+ * different problems.
+ */
+app.post('/deliver', async (req, res) => {
+  try {
+    const { email, code, appName } = req.body ?? {}
+    if (!email || !code) return res.status(400).json({ error: 'email and code are required' })
+    await send({ to: email, ...codeEmail({ code, appName: appName ?? 'an app', senderLabel: LABEL }) })
+    res.json({ sent: true })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
 /** A code is worth exactly one attempt, right or wrong. */
 app.post('/check', (req, res) => {
   const { email, nonce, code } = req.body ?? {}

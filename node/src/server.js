@@ -100,6 +100,68 @@ export function createServer() {
     }
   })
 
+  /**
+   * Sign in with two email codes and a password.
+   *
+   * Both codes are checked — one issued by this node, one by a sender it does not control
+   * — and neither is sufficient alone. The credential key arrives already stretched from
+   * the password in the browser, so no node ever sees the password and two colluding
+   * senders without it land on a different, empty identity.
+   *
+   * This path may create an identity. It may not recover one: a code arriving in a mailbox
+   * proves the mailbox, not the person.
+   */
+  app.post('/login/email', async (req, res) => {
+    try {
+      const { email, nonce, codes, credentialKey, sessionAddress, appId } = req.body ?? {}
+      if (!email || !nonce || !Array.isArray(codes) || codes.length < 2 || !credentialKey || !sessionAddress) {
+        return res.status(400).json({ error: 'email, nonce, two codes, credentialKey and sessionAddress are required' })
+      }
+
+      const mine = otp.check({ email, nonce, code: codes[0] })
+      const theirs = await checkWithSecondSender({ email, nonce, code: codes[1] })
+      if (!mine || !theirs) return res.status(400).json({ error: 'both codes have to be right' })
+
+      const hash = credentialHash({ iss: ISSUERS.email, sub: credentialKey, salt: config.salt })
+
+      const existing = await chain.identityOf(hash)
+      if (existing !== '0x0000000000000000000000000000000000000000') {
+        return res.json({ identity: existing, created: false })
+      }
+
+      const identity = appId
+        ? await chain.appAddress(hash, appId, sessionAddress)
+        : await chain.personalAddress(hash, sessionAddress)
+
+      const digest = linkDigest({
+        chainId: chain.chainId,
+        identityRegistry: config.contracts.identityRegistry,
+        credentialHash: hash,
+        identity,
+      })
+
+      const signatures = await collect({
+        digest,
+        threshold: Number(await chain.threshold()),
+        ownShare: {
+          signer: chain.account.address,
+          signature: await signShare({ digest, privateKey: config.privateKey }),
+        },
+      })
+
+      const result = await chain.deployAndLink({
+        credentialHash: hash,
+        appId: appId ?? null,
+        firstOwner: sessionAddress,
+        signatures,
+      })
+
+      res.json({ identity: result.identity, created: true, tx: result.linkHash })
+    } catch (error) {
+      res.status(400).json({ error: error.message })
+    }
+  })
+
   /** What an app demands for an action — the same answer its ENS name gives. */
   app.get('/policy/:appId/:action', async (req, res) => {
     try {
@@ -111,13 +173,22 @@ export function createServer() {
     }
   })
 
-  /** Issue one of the two email codes. The other sender is not this node's business. */
+  /**
+   * Issue one of the two email codes. The other sender is not this node's business, and
+   * the code itself never comes back over this connection — it goes to the mailbox, which
+   * is the only reason it is worth anything.
+   */
   app.post('/otp', async (req, res) => {
-    const { email, nonce } = req.body ?? {}
-    if (!email || !nonce) return res.status(400).json({ error: 'email and nonce are required' })
-    const { code, commitment } = otp.issue({ email, nonce })
-    // TODO: hand `code` to the mail service; it is returned here only until that exists.
-    res.json({ commitment, code: process.env.NODE_ENV === 'production' ? undefined : code })
+    try {
+      const { email, nonce, appName } = req.body ?? {}
+      if (!email || !nonce) return res.status(400).json({ error: 'email and nonce are required' })
+
+      const { code, commitment } = otp.issue({ email, nonce })
+      await mail({ email, code, appName })
+      res.json({ commitment })
+    } catch (error) {
+      res.status(500).json({ error: error.message })
+    }
   })
 
   app.post('/otp/check', async (req, res) => {
@@ -126,4 +197,38 @@ export function createServer() {
   })
 
   return app
+}
+
+/**
+ * The second code comes from a sender this node does not operate. If that sender is not
+ * configured, this path is unavailable rather than quietly reduced to one code — half a
+ * two-sender scheme is worse than none, because it looks like the real thing.
+ */
+async function checkWithSecondSender({ email, nonce, code }) {
+  const url = process.env.SECOND_SENDER_URL
+  if (!url) throw new Error('no second sender is configured, so email sign-in is off')
+
+  const response = await fetch(new URL('/check', url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, nonce, code }),
+  })
+  if (!response.ok) return false
+  const data = await response.json()
+  return data.ok === true
+}
+
+/** Hand the code to the mail service. In development it is logged there, not sent. */
+async function mail({ email, code, appName }) {
+  const url = process.env.MAIL_URL
+  if (!url) {
+    console.log(`[otp] ${email} -> ${code}`)
+    return
+  }
+  const response = await fetch(new URL('/deliver', url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, code, appName }),
+  })
+  if (!response.ok) throw new Error('the mail service refused to send the code')
 }
