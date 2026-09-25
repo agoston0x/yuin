@@ -1,0 +1,30 @@
+# One node is these two containers. Five of these, three agreeing, make a registration.
+services:
+  bee:
+    image: ethersphere/bee:2.8.2
+    restart: unless-stopped
+    command: start
+    environment:
+      # Full, not light: a light node cannot receive GSOC messages.
+      BEE_FULL_NODE: "true"
+      BEE_API_ADDR: ":1633"
+      BEE_P2P_ADDR: ":1634"
+      BEE_SWAP_ENABLE: "true"
+      BEE_PASSWORD: ${BEE_PASSWORD}
+      BEE_BLOCKCHAIN_RPC_ENDPOINT: ${GNOSIS_RPC}
+    volumes:
+      - bee-data:/home/bee/.bee
+    ports:
+      - "1634:1634"
+
+  node:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - bee
+    env_file: .env
+    ports:
+      - "${PORT:-8700}:8700"
+
+volumes:
+  bee-data:
