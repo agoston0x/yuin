@@ -5,6 +5,13 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@ethersphere/bee-js": "^8.3.1",
+    "express": "^4.21.2",
+    "jose": "^5.9.6",
+    "viem": "^2.21.54"
   }
 }
