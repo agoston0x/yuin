@@ -21,6 +21,8 @@ import { config } from './config.js'
 const params = new URLSearchParams(location.search)
 const appLabel = params.get('app') ?? ''
 const returnTo = params.get('return_to') ?? ''
+// The app generates its own session key and sends the public half; see session.js.
+const offeredKey = params.get('session_pk') ?? ''
 
 const el = document.getElementById('app')
 
@@ -96,7 +98,7 @@ function page({ appLabel, required }) {
 
 function wire({ appId, app, required }) {
   document.getElementById('google')?.addEventListener('click', () => {
-    const s = session.create()
+    const s = offeredKey ? session.adopt(offeredKey) : session.create()
     status('Sending you to Google…')
     google.redirectToGoogle({
       clientId: app.aud,
@@ -126,7 +128,7 @@ function wire({ appId, app, required }) {
   document.getElementById('email-redeem')?.addEventListener('click', async () => {
     try {
       const { nonce, address } = JSON.parse(sessionStorage.getItem('manju.otp'))
-      const s = session.create()
+      const s = offeredKey ? session.adopt(offeredKey) : session.create()
       status('Checking with the nodes…')
       const result = await email.redeem({
         email: address,

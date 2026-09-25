@@ -1,2 +1,7 @@
 export { createClient } from './client.js'
-export type { ClientConfig, Session, StepUpResult } from './types.js'
+export type { Client } from './client.js'
+export type { ClientConfig, Contracts, Session, StepUp } from './types.js'
+export { appIdFor } from './login.js'
+export { KIND_NAMES } from './verify.js'
+export * as uniswap from './uniswap.js'
+export * as accounts from './accounts.js'
