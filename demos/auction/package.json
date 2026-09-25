@@ -4,6 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "serve": "node build.mjs --serve"
+  },
+  "dependencies": {
+    "@manju/sdk": "file:../../sdk",
+    "viem": "^2.21.54"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
   }
 }

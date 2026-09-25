@@ -1,13 +1,43 @@
 /**
- * The smallest complete integration.
+ * The smallest complete integration, and a tour of the four things every app ends up
+ * wanting: sign in, see who you are, gate an action, and show what is still missing.
  *
- *   const manju = createClient({ appId })
- *   await manju.login()
- *   const gate = await manju.verify('enter')
+ *   const manju = await createClient({ app })
+ *   manju.session          // null, or an account address
+ *   manju.login()          // leaves the page and comes back signed in
+ *   await manju.verify('x') // { ok } or { ok: false, missing: [...] }
  *
- * Signed in means an identity and an account. A gate returns a result rather than
- * throwing, because "you need to verify first" is a screen the app draws, not an error it
- * catches.
+ * There is no `onAuthStateChanged`, no provider component, no context. A page either has
+ * a session or it does not, and the answer is the same on every reload.
  */
+import { client } from './manju.js'
+import { gateFor } from './gates.js'
+import { render } from './ui.js'
 
-// TODO
+const state = {
+  session: client.session,
+  loginPolicy: await client.loginPolicy(),
+  message: '',
+}
+
+function refresh() {
+  render(state, {
+    onLogin: () => client.login(),
+    onLogout: () => {
+      client.logout()
+      state.session = null
+      state.message = ''
+      refresh()
+    },
+    onProtected: async () => {
+      // The gate is read from chain at the moment of the click, not when the page loaded.
+      const gate = await gateFor(client, 'protected')
+      state.message = gate.ok
+        ? 'Allowed. This is where the app does the thing.'
+        : `Not yet — this action needs ${gate.missing.join(', ')}.`
+      refresh()
+    },
+  })
+}
+
+refresh()
