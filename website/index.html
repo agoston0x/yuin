@@ -7,7 +7,79 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- The pitch: pick your sign-in methods and your gates, write no auth code. -->
-  <script type="module" src="src/landing.js"></script>
+<nav>
+  <a class="brand" href="/">Manju</a>
+  <div>
+    <a href="console.html">Build</a>
+    <a href="dashboard.html">Your account</a>
+  </div>
+</nav>
+
+<header>
+  <h1>Sign-in that nobody owns.</h1>
+  <p class="lede">
+    Your users get an account with no seed phrase and no password. You get no auth code to
+    write, and no database of who they are — because there isn't one to keep.
+  </p>
+  <div class="cta">
+    <a class="button primary" href="console.html">Set up an app</a>
+    <a class="button" href="dashboard.html">See an account</a>
+  </div>
+  <p class="nodes" id="nodes"></p>
+</header>
+
+<section class="compare">
+  <h2>What is different</h2>
+  <div class="grid">
+    <div>
+      <h3>The usual way</h3>
+      <ul>
+        <li>A provider holds the mapping from an email to an address.</li>
+        <li>That provider goes down and your users are locked out.</li>
+        <li>Auth rules live in your code, so changing one is a deploy.</li>
+        <li>Leaving means asking for an export.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Here</h3>
+      <ul>
+        <li>The mapping is a salted hash on chain. Nobody holds the other half.</li>
+        <li>Any node can sign a user in; a majority has to agree.</li>
+        <li>Auth rules are records. Tick a box and the next call obeys it.</li>
+        <li>Add your own wallet as an owner and walk out with the account.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="how">
+  <h2>How a sign-in goes</h2>
+  <ol>
+    <li><strong>A key is made in the browser</strong> — before any provider is contacted, and it never leaves.</li>
+    <li><strong>The provider signs a token</strong> that names that key, and nothing else can use it.</li>
+    <li><strong>The nodes check it</strong> — the signature, the audience, the key — and a majority sign an attestation.</li>
+    <li><strong>An account appears</strong>, with a session key that expires and cannot spend past its cap.</li>
+  </ol>
+  <p class="note">
+    Lose the device and a recovery goes through a quorum, then waits in the open where you can
+    stop it. A recovery nobody objects to is a recovery. One you are awake for is a theft.
+  </p>
+</section>
+
+<section class="honest">
+  <h2>What we are not claiming</h2>
+  <ul>
+    <li>Nodes see the provider's token while they verify it. Privacy here is optimistic, not cryptographic.</li>
+    <li>A targeted attacker who already knows your provider subject can confirm a guess against the registry.</li>
+    <li>The node set is small and known today. The registry and the slashing are what make it open later.</li>
+  </ul>
+</section>
+
+<footer>
+  <span>Built at ETHGlobal Tokyo 2026</span>
+  <span>Swarm · ENSv2 · World · Uniswap</span>
+</footer>
+
+<script type="module" src="landing.js"></script>
 </body>
 </html>
