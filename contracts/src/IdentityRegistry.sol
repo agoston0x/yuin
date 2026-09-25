@@ -1,27 +1,106 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {INodeRegistry} from "./interfaces/INodeRegistry.sol";
+import {IAccount} from "./interfaces/IAccount.sol";
+import {Sig} from "./lib/Sig.sol";
+
 /**
  * The mapping nobody owns.
  *
  * A credential is `keccak(iss ‖ sub ‖ salt)` — a Google subject, a World nullifier, an
- * email. What it hashes never appears here, so this contract knows that some credential
- * controls some identity and nothing more. The thing a centralized provider holds is
- * precisely the thing this contract cannot.
+ * email address. What it hashes never appears here, so this contract knows that some
+ * credential controls some identity and nothing else. The thing a centralized provider
+ * holds is precisely the thing this contract cannot.
  *
- * Many credentials may point at one identity, so losing a provider is not losing the
- * account. A credential points at one identity forever: write-once, no admin, no upgrade.
+ * Two ways in. A credential for a brand-new identity is written by the node quorum, which
+ * is the only party that has seen the provider's token. A credential added to an identity
+ * that already exists is written on an owner's signature instead — adding a recovery
+ * method is an act of ownership, not of consensus, and the quorum has no business doing
+ * it alone.
+ *
+ * Write-once per credential, and no admin: there is no function here that can point an
+ * existing credential somewhere new, which is what makes the mapping worth trusting.
  */
 contract IdentityRegistry {
+    INodeRegistry public immutable nodes;
+
     /// credentialHash => identity
     mapping(bytes32 => address) public identityOf;
 
+    /// Consumed once per owner-signed link, so a signature cannot be replayed.
+    mapping(address => uint256) public nonceOf;
+
     event CredentialLinked(bytes32 indexed credentialHash, address indexed identity);
 
-    /// First credential for a new identity. Written by the node quorum, behind a timelock.
-    function link(bytes32 credentialHash, address identity, bytes calldata quorumSig) external {}
+    error AlreadyLinked();
+    error ZeroIdentity();
+    error NotEnoughSigners();
+    error SignersOutOfOrder();
+    error NotANode(address signer);
+    error NotAnOwner(address signer);
 
-    /// Another credential for an identity that exists. Adding a recovery method is an act
-    /// of ownership, so it takes an owner's signature rather than the quorum's.
-    function linkWithOwner(bytes32 credentialHash, address identity, bytes calldata ownerSig) external {}
+    constructor(INodeRegistry nodeRegistry) {
+        nodes = nodeRegistry;
+    }
+
+    /**
+     * The first credential for an identity that does not exist yet.
+     *
+     * Every signature covers the same digest, and the digest names this contract and this
+     * chain — an attestation gathered for one deployment is meaningless at another.
+     * Signers must arrive in ascending order, which is how duplicates are excluded without
+     * a second pass over the array.
+     */
+    function link(bytes32 credentialHash, address identity, bytes[] calldata signatures) external {
+        if (identity == address(0)) revert ZeroIdentity();
+        if (identityOf[credentialHash] != address(0)) revert AlreadyLinked();
+
+        bytes32 digest = linkDigest(credentialHash, identity);
+
+        uint256 threshold = nodes.threshold();
+        if (signatures.length < threshold) revert NotEnoughSigners();
+
+        address previous = address(0);
+        for (uint256 i = 0; i < signatures.length; i++) {
+            address signer = Sig.recover(digest, signatures[i]);
+            if (signer <= previous) revert SignersOutOfOrder();
+            if (!nodes.isActive(signer)) revert NotANode(signer);
+            previous = signer;
+        }
+
+        identityOf[credentialHash] = identity;
+        emit CredentialLinked(credentialHash, identity);
+    }
+
+    /**
+     * Another credential for an identity that already exists — a second provider, a
+     * passkey, a recovery method. One owner signature is enough, because an owner can
+     * already do anything this credential would later allow.
+     */
+    function linkWithOwner(bytes32 credentialHash, address identity, bytes calldata ownerSignature) external {
+        if (identity == address(0)) revert ZeroIdentity();
+        if (identityOf[credentialHash] != address(0)) revert AlreadyLinked();
+
+        uint256 nonce = nonceOf[identity];
+        address signer = Sig.recover(ownerLinkDigest(credentialHash, identity, nonce), ownerSignature);
+        if (!IAccount(identity).isOwner(signer)) revert NotAnOwner(signer);
+
+        nonceOf[identity] = nonce + 1;
+        identityOf[credentialHash] = identity;
+        emit CredentialLinked(credentialHash, identity);
+    }
+
+    function linkDigest(bytes32 credentialHash, address identity) public view returns (bytes32) {
+        return keccak256(abi.encode("manju/link", block.chainid, address(this), credentialHash, identity));
+    }
+
+    function ownerLinkDigest(bytes32 credentialHash, address identity, uint256 nonce)
+        public
+        view
+        returns (bytes32)
+    {
+        return
+            keccak256(abi.encode("manju/link-owner", block.chainid, address(this), credentialHash, identity, nonce));
+    }
 }
