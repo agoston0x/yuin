@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {INodeRegistry} from "./interfaces/INodeRegistry.sol";
-import {IAccount} from "./interfaces/IAccount.sol";
+import {IOwners} from "./interfaces/IOwners.sol";
 import {Sig} from "./lib/Sig.sol";
 
 /**
@@ -84,7 +84,7 @@ contract IdentityRegistry {
 
         uint256 nonce = nonceOf[identity];
         address signer = Sig.recover(ownerLinkDigest(credentialHash, identity, nonce), ownerSignature);
-        if (!IAccount(identity).isOwner(signer)) revert NotAnOwner(signer);
+        if (!IOwners(identity).isOwner(signer)) revert NotAnOwner(signer);
 
         nonceOf[identity] = nonce + 1;
         identityOf[credentialHash] = identity;
