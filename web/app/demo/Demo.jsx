@@ -21,6 +21,10 @@ const APP_ID = process.env.NEXT_PUBLIC_WORLD_APP_ID
 const ACTION_AGE = process.env.NEXT_PUBLIC_WORLD_ACTION_AGE || 'age'
 const ACTION_SELFIE = process.env.NEXT_PUBLIC_WORLD_ACTION_SELFIE || 'selfie'
 const MINIMUM_AGE = Number(process.env.NEXT_PUBLIC_MINIMUM_AGE || 18)
+// A sandbox app is only reachable by the sandbox build of World App. Getting this wrong
+// fails with a message about configuration rather than about the proof, which is a
+// confusing half-hour if you are looking at the wrong layer.
+const ENVIRONMENT = process.env.NEXT_PUBLIC_WORLD_ENV || 'production'
 
 /**
  * World's errors arrive in several shapes depending on where they were raised. Keeping
@@ -189,6 +193,7 @@ export default function Demo() {
           app_id={APP_ID}
           action={ACTION_AGE}
           rp_context={context.age}
+          environment={ENVIRONMENT}
           preset={identityCheck({ attributes: [{ type: 'minimum_age', value: MINIMUM_AGE }] })}
           handleVerify={check}
           onSuccess={() => setPassed((p) => ({ ...p, age: true }))}
@@ -204,6 +209,7 @@ export default function Demo() {
           app_id={APP_ID}
           action={ACTION_SELFIE}
           rp_context={context.selfie}
+          environment={ENVIRONMENT}
           preset={selfieCheck()}
           handleVerify={check}
           onSuccess={() => {
