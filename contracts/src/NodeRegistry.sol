@@ -5,6 +5,18 @@ import {INodeRegistry} from "./interfaces/INodeRegistry.sol";
 import {Sig} from "./lib/Sig.sol";
 
 /**
+ * LEGACY — superseded by EmailIdentityRegistry and SenderRegistry.
+ *
+ * This is the staked-quorum path: a majority of registered nodes verifying a provider's
+ * token and signing an attestation. It is sound and it is tested, and it is not what gets
+ * deployed, because it needs five operators alive before anyone can sign in at all.
+ *
+ * Kept because the argument for it survives the pivot — the objection was operational,
+ * never cryptographic — and because the shape here is where this goes again once there
+ * are enough operators to justify it. See docs/PIVOT.md.
+ */
+
+/**
  * Who may verify a login, and what it costs them to lie.
  *
  * A node puts up a stake, publishes where it can be reached, and joins the active set. A
