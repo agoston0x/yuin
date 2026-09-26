@@ -23,6 +23,10 @@ export async function POST(request) {
     return Response.json({ ok: false, error: 'expected json' }, { status: 400 })
   }
 
+  // The shape of what arrives matters enough to record: a proof that was refused and a
+  // proof that never had the right fields look identical from the browser.
+  console.log('[verify] forwarding keys:', Object.keys(payload ?? {}).join(', '))
+
   const response = await fetch(`https://developer.world.org/api/v4/verify/${RP_ID}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -30,15 +34,31 @@ export async function POST(request) {
     body: JSON.stringify(payload),
   })
 
-  const result = await response.json().catch(() => ({}))
+  const raw = await response.text()
+  let result
+  try {
+    result = JSON.parse(raw)
+  } catch {
+    result = { detail: raw.slice(0, 400) }
+  }
 
   if (!response.ok) {
-    // World's own words rather than a guess at what went wrong.
+    // Everything World said, in the logs and in the answer. Guessing at this from a bare
+    // 400 is how an afternoon disappears.
+    console.error('[verify] world refused', response.status, raw.slice(0, 600))
     return Response.json(
-      { ok: false, error: result?.detail ?? result?.code ?? 'World refused the proof', code: result?.code },
+      {
+        ok: false,
+        status: response.status,
+        error: result?.detail ?? result?.code ?? 'World refused the proof',
+        code: result?.code,
+        world: result,
+      },
       { status: 400 },
     )
   }
+
+  console.log('[verify] accepted')
 
   // A real deployment records the nullifier so one proof cannot be spent twice. Nothing
   // is stored here, because this page is a demonstration and says so.

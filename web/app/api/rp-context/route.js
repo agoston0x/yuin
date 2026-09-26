@@ -32,7 +32,15 @@ export async function POST(request) {
 
   // The action is signed along with the nonce, so a signature obtained for one gate
   // cannot be presented at another.
-  const signed = signRequest({ signingKeyHex: SIGNING_KEY, action })
+  let signed
+  try {
+    signed = signRequest({ signingKeyHex: SIGNING_KEY, action })
+  } catch (e) {
+    // A malformed key fails here rather than three screens later, which is where you
+    // would otherwise go looking.
+    console.error('[rp-context] could not sign:', e.message)
+    return Response.json({ error: `could not sign the request: ${e.message}` }, { status: 500 })
+  }
 
   return Response.json({
     rp_id: RP_ID,
