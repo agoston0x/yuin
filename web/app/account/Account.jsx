@@ -154,7 +154,7 @@ export default function Account() {
           <div className="panel">
             <h3>No account here</h3>
             <p className="muted">
-              This browser holds no key. <a href="/signup">Make an account</a> and it will.
+              This browser holds no key. <a href="/join/">Make an account</a> and it will.
             </p>
           </div>
         </div>
