@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 const SLIDES = [
   { num: '01 — Setup', title: 'Live in an afternoon.', body: 'Pick how people sign in. Email code, Google, passkey, World — any of them, in any combination, from a form.', tags: ['Email OTA', 'Google', 'Passkey', 'World'] },
-  { num: '02 — Access control', title: 'Gate what matters.', body: 'Name an action — bid, withdraw, enter — and say what it takes. Change it while the app is live; the next call obeys.', tags: ['Per action', 'Edit live', 'No redeploy'] },
+  { num: '02 — Two ways in', title: 'Private, or fast.', body: 'Email and a password, where the password never leaves the browser. Or Google, in one click. Your app picks which it accepts.', tags: ['Email + password', 'Google', 'Your choice'] },
   { num: '03 — Ownership', title: 'Nobody holds the door.', body: 'Credentials are salted hashes on chain. No operator maps an address back to a person, and no operator can lock anyone out.', tags: ['Staked nodes', 'No central DB', 'Slashable'] },
   { num: '04 — Recovery', title: 'More than one way back.', body: 'A passkey, a second provider, a World proof, or your own wallet. Lose a phone, not an account.', tags: ['Passkey', 'World', 'Any EOA'] },
   { num: '05 — Money', title: 'Pay in what you hold.', body: 'Prices in one token, wallets in another. The swap rides inside the payment, so nobody sees a swap screen.', tags: ['Uniswap', 'Exact output', 'One signature'] },
