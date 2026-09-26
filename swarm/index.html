@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Sign up · Yuin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;
+  background:#f5f0e4;color:#071216;font:16px/1.55 'DM Sans',system-ui,sans-serif}
+main{width:min(100%,460px)}
+.mark{display:block;width:64px;margin:0 auto 22px}
+h1{font-size:30px;letter-spacing:-.04em;line-height:1.05;margin:0 0 10px}
+p{margin:0 0 18px;color:#5c5a54;font-size:15px}
+.card{background:#fff;border-radius:22px;box-shadow:inset 0 0 0 1.5px #cfc6b2;padding:26px}
+input{width:100%;padding:13px 15px;margin:0 0 10px;border:1.5px solid #cfc6b2;border-radius:12px;
+  font:inherit;background:#f5f0e4}
+button{width:100%;padding:14px 20px;border:0;border-radius:999px;background:#071216;color:#f5f0e4;
+  font:inherit;font-weight:700;cursor:pointer}
+button:disabled{opacity:.45;cursor:default}
+code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;color:#071216}
+.out{background:#071216;color:#f5f0e4;border-radius:12px;padding:14px;margin:0 0 16px;
+  font:12px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
+.tag{display:inline-block;background:#1f5a3915;color:#1f5a39;border-radius:999px;
+  padding:6px 14px;font-size:13px;font-weight:700;margin-bottom:14px}
+#status{min-height:1.5em;font-size:14px;color:#5c5a54;text-align:center;margin-top:16px}
+#status[data-kind=bad]{color:#ef3e16}
+.fine{font-size:13px;text-align:center;margin-top:18px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <img class="mark" src="seal.png" alt="Yuin" />
+
+  <div class="step card" id="start-step">
+    <h1>Make an account.</h1>
+    <p>An email and a password. No wallet, no seed phrase, and no record anywhere of which
+       address belongs to you.</p>
+    <form id="start">
+      <input id="email" type="email" placeholder="you@example.com" required />
+      <input id="password" type="password" placeholder="A password only you know" required />
+      <button type="submit">Continue</button>
+    </form>
+    <p class="fine">This password is half the key. Nobody can reset it, including us,
+       because nobody has it.</p>
+  </div>
+
+  <div class="step card" id="codes" hidden>
+    <h1>Two codes.</h1>
+    <p>One from Yuin, one from the app. Neither works alone — that is the point.</p>
+    <form id="finish">
+      <input id="code1" inputmode="numeric" placeholder="Code from Yuin" required />
+      <input id="code2" inputmode="numeric" placeholder="Code from the app" required />
+      <button type="submit">Create my account</button>
+    </form>
+    <p class="fine">Your account will be at <code id="predicted"></code> — it has an address
+       before it exists.</p>
+  </div>
+
+  <div class="step card" id="passkey" hidden>
+    <span class="tag">Account created</span>
+    <div class="out" id="made"></div>
+    <p>One more thing, and it matters: right now this rests on a single key in this browser.
+       Add a passkey and it survives losing this device.</p>
+    <button id="addkey">Add a passkey</button>
+  </div>
+
+  <div class="step card" id="done" hidden>
+    <span class="tag">Ready</span>
+    <div class="out" id="done-account"></div>
+    <p>An account with two ways in and no seed phrase. Nobody — including us — can lock you
+       out of it, or tell anyone it is yours.</p>
+  </div>
+
+  <div class="step card" id="exists" hidden>
+    <h1>You already have one.</h1>
+    <div class="out" id="account"></div>
+    <p>Which is the proof nothing was stored: the same email and password produce the same
+       account, on any device, forever.</p>
+  </div>
+
+  <p id="status"></p>
+  <p class="fine">Served from Swarm. Nobody operates this page.</p>
+</main>
+<!--SCRIPT-->
+</body>
+</html>

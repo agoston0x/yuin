@@ -1,0 +1,12 @@
+{
+  "name": "yuin-swarm-signup",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {
+    "hash-wasm": "^4.12.0",
+    "viem": "^2.21.54"
+  },
+  "devDependencies": { "esbuild": "^0.24.0" }
+}
