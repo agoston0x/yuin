@@ -16,6 +16,7 @@ import { config } from './config.js'
 import { createDigest, signDigest } from './digest.js'
 import { issue, redeem, withinRateLimit } from './codes.js'
 import { send } from './mail.js'
+import { accountFor, submit } from './relay.js'
 
 const account = privateKeyToAccount(config.privateKey)
 
@@ -92,6 +93,34 @@ app.post('/sign', async (req, res) => {
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
+  }
+})
+
+/**
+ * Broadcast a transaction the browser cannot pay for.
+ *
+ * Every field here is already inside the digest both senders signed, so this service
+ * cannot change what happens — only whether it happens. `createAccount` is
+ * permissionless, so anyone holding ether can send the same transaction instead.
+ */
+app.post('/relay', async (req, res) => {
+  try {
+    const { identityHash, firstOwner, nonce, expiry, signatures } = req.body ?? {}
+    if (!identityHash || !firstOwner || nonce === undefined || !expiry || !Array.isArray(signatures)) {
+      return res.status(400).json({ error: 'identityHash, firstOwner, nonce, expiry and signatures are required' })
+    }
+    if (signatures.length !== 2) return res.status(400).json({ error: 'two signatures are required' })
+
+    const existing = await accountFor(identityHash)
+    if (existing && existing !== '0x0000000000000000000000000000000000000000') {
+      return res.json({ account: existing, created: false })
+    }
+
+    const result = await submit({ identityHash, firstOwner, nonce, expiry, signatures })
+    res.json({ account: result.account, tx: result.hash, created: true })
+  } catch (error) {
+    // Whatever the chain said, rather than a guess at what it meant.
+    res.status(400).json({ error: error.shortMessage ?? error.message })
   }
 })
 

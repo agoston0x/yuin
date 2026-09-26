@@ -1,0 +1,33 @@
+/**
+ * The first owner of the account.
+ *
+ * A key made here and kept here. It is what signs for the account until a passkey is
+ * added, and it is the one thing in this flow that is genuinely secret and genuinely
+ * fragile — losing it before adding a second owner means losing the account, which is
+ * why the page refuses to consider sign-up finished until a passkey exists.
+ */
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
+
+const KEY = 'yuin.owner'
+
+export function loadOrCreate() {
+  const existing = typeof localStorage !== 'undefined' ? localStorage.getItem(KEY) : null
+  if (existing) {
+    const privateKey = JSON.parse(existing).privateKey
+    return { privateKey, address: privateKeyToAccount(privateKey).address }
+  }
+
+  const privateKey = generatePrivateKey()
+  const owner = { privateKey, address: privateKeyToAccount(privateKey).address }
+  localStorage.setItem(KEY, JSON.stringify(owner))
+  return owner
+}
+
+export function current() {
+  const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(KEY) : null
+  return raw ? JSON.parse(raw) : null
+}
+
+export function forget() {
+  localStorage.removeItem(KEY)
+}
