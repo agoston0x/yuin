@@ -23,25 +23,24 @@ function challenge() {
 }
 
 /**
- * Pull x and y out of a COSE_Key.
+ * Pull x and y out of what the authenticator returned.
  *
- * The structure is a small CBOR map, and the two coordinates are tagged -2 and -3, which
- * encode as the bytes 0x21 and 0x22. Each is followed by 0x58 0x20 (a 32-byte string).
- * Finding those markers is enough, and anything unexpected throws rather than guessing.
+ * `getPublicKey()` hands back SPKI DER, not COSE — an algorithm identifier followed by a
+ * bit string, and for P-256 that bit string ends with the uncompressed point: 0x04, then
+ * the two 32-byte coordinates. So the last 65 bytes are the part that matters, and the
+ * 0x04 is checked rather than assumed, because a key that is not an uncompressed P-256
+ * point would otherwise be silently misread as one.
  */
-export function coordinatesFrom(cosePublicKey) {
-  const bytes = new Uint8Array(cosePublicKey)
+export function coordinatesFrom(publicKey) {
+  const bytes = new Uint8Array(publicKey)
+  if (bytes.length < 65) throw new Error('that key is too short to be a P-256 point')
 
-  const find = (label) => {
-    for (let i = 0; i < bytes.length - 34; i++) {
-      if (bytes[i] === label && bytes[i + 1] === 0x58 && bytes[i + 2] === 0x20) {
-        return bytes.slice(i + 3, i + 35)
-      }
-    }
-    throw new Error('this authenticator did not return a P-256 key in the expected form')
+  const point = bytes.slice(bytes.length - 65)
+  if (point[0] !== 0x04) {
+    throw new Error('this authenticator did not return an uncompressed P-256 point')
   }
 
-  return { x: toHex(find(0x21)), y: toHex(find(0x22)) }
+  return { x: toHex(point.slice(1, 33)), y: toHex(point.slice(33, 65)) }
 }
 
 /** The credential id, hashed, because the account keys passkeys by a bytes32. */
