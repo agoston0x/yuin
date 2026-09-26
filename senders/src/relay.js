@@ -38,6 +38,8 @@ const transport = http(config.rpc)
 export const publicClient = createPublicClient({ chain, transport })
 const walletClient = createWalletClient({ account, chain, transport })
 
+export { walletClient }
+
 export async function accountFor(identityHash) {
   return publicClient.readContract({
     address: config.registry,
@@ -61,4 +63,31 @@ export async function submit({ identityHash, firstOwner, nonce, expiry, signatur
   const hash = await walletClient.writeContract(request)
   await publicClient.waitForTransactionReceipt({ hash })
   return { hash, account: await accountFor(identityHash) }
+}
+
+/**
+ * A little gas for a key that was made a minute ago.
+ *
+ * The owner key can drive the account — it is an owner — but it cannot pay for the
+ * privilege, and telling a new user to go and acquire testnet ether before they can do
+ * anything is where the demonstration ends.
+ *
+ * This is Yuin paying, openly, because there is no paymaster yet. It is capped per
+ * address and it is not a faucet: the amount covers a handful of transactions and no
+ * more. A real deployment puts a paymaster here with a policy scoped to the app.
+ */
+const DRIP = 3000000000000000n // 0.003 ETH, a few transactions' worth
+const dripped = new Set()
+
+export async function drip(owner) {
+  const key = owner.toLowerCase()
+  if (dripped.has(key)) return { sent: false, reason: 'already funded' }
+
+  const balance = await publicClient.getBalance({ address: owner })
+  if (balance >= DRIP) return { sent: false, reason: 'already has gas' }
+
+  dripped.add(key)
+  const hash = await walletClient.sendTransaction({ to: owner, value: DRIP })
+  await publicClient.waitForTransactionReceipt({ hash })
+  return { sent: true, hash, amount: DRIP.toString() }
 }

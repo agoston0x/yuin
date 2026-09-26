@@ -16,7 +16,7 @@ import { config } from './config.js'
 import { createDigest, signDigest } from './digest.js'
 import { issue, redeem, withinRateLimit } from './codes.js'
 import { send } from './mail.js'
-import { accountFor, submit } from './relay.js'
+import { accountFor, drip, submit } from './relay.js'
 import { identityFor, verifyIdToken } from './google.js'
 
 const account = privateKeyToAccount(config.privateKey)
@@ -164,6 +164,24 @@ app.post('/relay', async (req, res) => {
     res.json({ account: result.account, tx: result.hash, created: true })
   } catch (error) {
     // Whatever the chain said, rather than a guess at what it meant.
+    res.status(400).json({ error: error.shortMessage ?? error.message })
+  }
+})
+
+/**
+ * Hand a newly made owner key enough gas to use its own account.
+ *
+ * Openly sponsored, capped, and once per address. Not a faucet — the amount is a few
+ * transactions, and a real deployment replaces this with a paymaster.
+ */
+app.post('/drip', async (req, res) => {
+  try {
+    const { owner } = req.body ?? {}
+    if (!owner || !/^0x[0-9a-fA-F]{40}$/.test(owner)) {
+      return res.status(400).json({ error: 'an owner address is required' })
+    }
+    res.json(await drip(owner))
+  } catch (error) {
     res.status(400).json({ error: error.shortMessage ?? error.message })
   }
 })

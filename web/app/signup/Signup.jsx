@@ -277,6 +277,9 @@ export default function Signup() {
               An account with two ways in and no seed phrase. Nobody — including us — can
               lock you out of it or tell anyone it is yours.
             </p>
+            <a className="btn" href="/account" style={{ display: 'inline-block', textDecoration: 'none' }}>
+              Open your account →
+            </a>
           </div>
         )}
 
