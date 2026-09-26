@@ -8,36 +8,26 @@
  * What comes back is the fact of the check, never the proof itself: an app downstream
  * cannot replay it anywhere, and nothing here learns who anybody is.
  */
-const APP_ID = process.env.NEXT_PUBLIC_WORLD_APP_ID
+const RP_ID = process.env.WORLD_RP_ID
 
 export async function POST(request) {
-  if (!APP_ID || !APP_ID.startsWith('app_')) {
-    return Response.json({ ok: false, error: 'NEXT_PUBLIC_WORLD_APP_ID is not set' }, { status: 500 })
+  if (!RP_ID) {
+    return Response.json({ ok: false, error: 'WORLD_RP_ID is not set' }, { status: 500 })
   }
 
-  let body
+  let payload
   try {
-    body = await request.json()
+    payload = await request.json()
   } catch {
     return Response.json({ ok: false, error: 'expected json' }, { status: 400 })
   }
 
-  const { proof, merkle_root, nullifier_hash, verification_level, action, signal } = body ?? {}
-  if (!proof || !merkle_root || !nullifier_hash || !action) {
-    return Response.json({ ok: false, error: 'incomplete proof' }, { status: 400 })
-  }
-
-  const response = await fetch(`https://developer.worldcoin.org/api/v2/verify/${APP_ID}`, {
+  // developer.world.org is where v4 lives; the old worldcoin.org host serves v2.
+  const response = await fetch(`https://developer.world.org/api/v4/verify/${RP_ID}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      proof,
-      merkle_root,
-      nullifier_hash,
-      verification_level,
-      action,
-      signal_hash: signal ?? undefined,
-    }),
+    // Forwarded unchanged: remapping fields here is how signatures get broken.
+    body: JSON.stringify(payload),
   })
 
   const result = await response.json().catch(() => ({}))
@@ -50,12 +40,7 @@ export async function POST(request) {
     )
   }
 
-  return Response.json({
-    ok: true,
-    // The nullifier is the same for the same person and the same action, and is the only
-    // durable thing here. It is not an identity; it is "this person, for this one gate".
-    nullifier: nullifier_hash,
-    level: verification_level,
-    action,
-  })
+  // Whatever World returned, unedited. The nullifier inside is the same value for the
+  // same person and the same gate — not an identity, just "this person, for this one".
+  return Response.json({ ok: true, result })
 }
