@@ -17,6 +17,7 @@ import { createDigest, signDigest } from './digest.js'
 import { issue, redeem, withinRateLimit } from './codes.js'
 import { send } from './mail.js'
 import { accountFor, submit } from './relay.js'
+import { identityFor, verifyIdToken } from './google.js'
 
 const account = privateKeyToAccount(config.privateKey)
 
@@ -93,6 +94,49 @@ app.post('/sign', async (req, res) => {
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
+  }
+})
+
+/**
+ * Sign for an account named by a Google token.
+ *
+ * Weaker than the email path and deliberately not the default: there is no password here,
+ * so two colluding senders could create an account for someone who never asked. See
+ * src/google.js for what removes that and why it has not been done yet.
+ */
+app.post('/sign-google', async (req, res) => {
+  try {
+    const { token, firstOwner, nonce, expiry } = req.body ?? {}
+    if (!token || !firstOwner || nonce === undefined || !expiry) {
+      return res.status(400).json({ error: 'token, firstOwner, nonce and expiry are required' })
+    }
+    if (!config.googleClientId) {
+      return res.status(501).json({ error: 'this sender has no google client configured' })
+    }
+
+    const claims = await verifyIdToken({ token, audience: config.googleClientId, firstOwner })
+    const identityHash = identityFor(claims.sub)
+
+    const digest = createDigest({
+      chainId: config.chainId,
+      registry: config.registry,
+      identityHash,
+      firstOwner,
+      nonce,
+      expiry,
+    })
+
+    res.json({
+      identityHash,
+      signature: await signDigest({ digest, privateKey: config.privateKey }),
+      signer: account.address,
+      sender: config.label,
+      // Said in the response, not only in a comment: a caller should be able to tell that
+      // this path rests on us rather than on a proof.
+      trustModel: 'sender-attested',
+    })
+  } catch (error) {
+    res.status(401).json({ error: error.message })
   }
 })
 
