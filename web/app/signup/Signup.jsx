@@ -15,11 +15,13 @@ import { useState } from 'react'
 import { createPublicClient, http } from 'viem'
 import { sepolia } from 'viem/chains'
 import { deriveIdentity } from '../../lib/identity'
-import * as owner from '../../lib/owner'
+import * as session from '../../lib/owner'
 import * as senders from '../../lib/senders'
 import * as passkey from '../../lib/passkey'
+import { accountAbi, publicClient, walletFor } from '../../lib/account'
 
 const REGISTRY = process.env.NEXT_PUBLIC_EMAIL_IDENTITY_REGISTRY
+const P256_VERIFIER = process.env.NEXT_PUBLIC_P256_VERIFIER
 const RPC = process.env.NEXT_PUBLIC_SEPOLIA_RPC || 'https://ethereum-sepolia-rpc.publicnode.com'
 
 const registryAbi = [
@@ -40,6 +42,10 @@ const registryAbi = [
 ]
 
 const client = createPublicClient({ chain: sepolia, transport: http(RPC) })
+
+function sendersList() {
+  return (process.env.NEXT_PUBLIC_SENDERS || '').split(',').map((s) => s.trim()).filter(Boolean)
+}
 
 export default function Signup() {
   const [step, setStep] = useState('start')
@@ -63,7 +69,7 @@ export default function Signup() {
       // Argon2 takes a second or two on purpose, so say so rather than appearing stuck.
       setBusy('Stretching your password. This is meant to be slow.')
       const derived = await deriveIdentity({ email, password })
-      const first = owner.loadOrCreate()
+      const first = session.loadOrCreate()
 
       setBusy('Checking whether this account already exists…')
       const existing = await client.readContract({
@@ -136,17 +142,54 @@ export default function Signup() {
   }
 
   /**
-   * Until this happens the account rests on one key in one browser. That is a bad place
-   * to leave someone, so the flow is not finished until there is a second way in.
+   * Until this happens the account rests on one key in one browser, which is a bad place
+   * to leave somebody — so the flow is not finished until there is a second way in.
+   *
+   * Two transactions: point the account at a P-256 verifier, then register the key. Both
+   * are sent by the owner key, which needs gas, so a sender drips it first. That drip is
+   * Yuin sponsoring the demo and the page says so rather than hiding it.
    */
   async function addPasskey() {
     setError('')
     try {
       setBusy('Waiting for your device…')
-      await passkey.create({ account, label: email })
+      const created = await passkey.create({ account, label: email })
+
+      const owner = session.current()
+      if (!owner?.privateKey) throw new Error('the owner key for this account is not in this browser')
+
+      setBusy('Getting gas to register it…')
+      await fetch(new URL('/drip', sendersList()[0]), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ owner: owner.address }),
+      }).catch(() => {})
+
+      const wallet = walletFor(owner.privateKey)
+
+      setBusy('Registering the passkey on chain…')
+      if (P256_VERIFIER) {
+        const one = await wallet.writeContract({
+          address: account,
+          abi: accountAbi,
+          functionName: 'setP256Verifier',
+          args: [P256_VERIFIER],
+        })
+        await publicClient.waitForTransactionReceipt({ hash: one })
+      }
+
+      const two = await wallet.writeContract({
+        address: account,
+        abi: accountAbi,
+        functionName: 'addPasskey',
+        args: [created.credentialId, BigInt(created.x), BigInt(created.y)],
+      })
+      await publicClient.waitForTransactionReceipt({ hash: two })
+
+      passkey.markRegistered()
       setStep('done')
     } catch (e) {
-      setError(e.message === 'unsupported' ? 'this browser has no passkey support' : e.message)
+      setError(e.shortMessage ?? e.message)
     } finally {
       setBusy('')
     }

@@ -57,14 +57,14 @@ contract PasskeyTest is Test {
     // Generated with node's P-256 against a real WebAuthn envelope; see the commit that
     // added this file for the script.
     bytes32 constant CHALLENGE = 0x1111111111111111111111111111111111111111111111111111111111111111;
-    bytes constant AUTH_DATA = hex"aee5aaf10a8f34e7d46eb65b52abd204185953d762dae280af6a031cc22b56610500000001";
+    bytes constant AUTH_DATA = hex"16ddd08ef7eec6ace452dd9eef81d2aaf4fc1706147e3c46e8800286aff178950500000001";
     string constant CLIENT_JSON =
-        '{"type":"webauthn.get","challenge":"ERERERERERERERERERERERERERERERERERERERERERE","origin":"https://yuin.claws.page","crossOrigin":false}';
-    bytes32 constant MESSAGE = 0x45bfed3300af51844745a363d184e3f33cc554d62de0a1fb7add95137d40adee;
-    uint256 constant X = 0xb415f0afff2998c71b75023c6ca467a5d3ea38eb258f9d2e4234214e9ca1da83;
-    uint256 constant Y = 0x59865c7452a99d8945f5e27422d7de652f96f5ec20a0dc29dbaa0546949d4f4b;
-    uint256 constant R = 0xe538663e3d3e50d6827574901d042b63200eb5339fa466f2c1d3e1d2ae3a8dd6;
-    uint256 constant S = 0x073af9baa2e3c4878305209300a9b10ac59ad9500084d8f5cfb73530abe1d98f;
+        '{"type":"webauthn.get","challenge":"ERERERERERERERERERERERERERERERERERERERERERE","origin":"https://yuin.dev","crossOrigin":false}';
+    bytes32 constant MESSAGE = 0xea9da8c1c3003a0b36a950922877bf597c717fd8b1db24a5ab5a9c909cf99210;
+    uint256 constant X = 0x3c7e5d376cd88f13a07276949532b2a016a64e3de04af857eaeaa6c3bbf8fd13;
+    uint256 constant Y = 0x6f62baca34aa5261d8829df8974dfc951c44d5ae7c66fdb8603133ea3e0214a2;
+    uint256 constant R = 0x326bf04400a8071481512bd08db5657bf40bf6fcb37dda77e10d4a2bd19ef8b4;
+    uint256 constant S = 0x673325994e163a7234b08dcba21471f6b5d96be5793e92acbc58d66fd025ccfa;
 
     bytes32 constant CREDENTIAL = keccak256("credential-one");
 
