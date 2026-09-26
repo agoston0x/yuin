@@ -10,3 +10,4 @@ broadcast/
 *.log
 .DS_Store
 scripts/addresses.env
+scripts/node_modules/

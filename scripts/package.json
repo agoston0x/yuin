@@ -1,0 +1,11 @@
+{
+  "name": "yuin-scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Harnesses that exercise the whole system rather than one piece of it.",
+  "dependencies": {
+    "hash-wasm": "^4.12.0",
+    "viem": "^2.21.54"
+  }
+}

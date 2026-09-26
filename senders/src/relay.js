@@ -10,17 +10,33 @@
  * is permissionless, anyone with ether can submit the same transaction themselves, which
  * is the escape hatch that keeps this a convenience rather than a gatekeeper.
  */
-import { createPublicClient, createWalletClient, http } from 'viem'
+import { createPublicClient, createWalletClient, defineChain, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { sepolia } from 'viem/chains'
+import * as chains from 'viem/chains'
 import { config } from './config.js'
 import { emailIdentityRegistryAbi } from './abi.js'
 
+/**
+ * Whichever chain the registry is actually on. Hardcoding one means a sender pointed at a
+ * local chain silently refuses to sign anything, which is a baffling half hour.
+ */
+function chainFor(id) {
+  const known = Object.values(chains).find((c) => c?.id === id)
+  if (known) return known
+  return defineChain({
+    id,
+    name: `chain ${id}`,
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: { default: { http: [config.rpc] } },
+  })
+}
+
+const chain = chainFor(config.chainId)
 const account = privateKeyToAccount(config.privateKey)
 const transport = http(config.rpc)
 
-export const publicClient = createPublicClient({ chain: sepolia, transport })
-const walletClient = createWalletClient({ account, chain: sepolia, transport })
+export const publicClient = createPublicClient({ chain, transport })
+const walletClient = createWalletClient({ account, chain, transport })
 
 export async function accountFor(identityHash) {
   return publicClient.readContract({
