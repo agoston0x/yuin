@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {IOwners} from "./interfaces/IOwners.sol";
+import {WebAuthn} from "./lib/WebAuthn.sol";
 import {IAccount4337, PackedUserOperation} from "./interfaces/IEntryPoint.sol";
 import {Sig} from "./lib/Sig.sol";
 
@@ -27,6 +28,9 @@ contract SmartAccount is IOwners, IAccount4337 {
     uint256 internal constant VALID = 0;
     uint256 internal constant INVALID = 1;
 
+    /// Leading byte marking a passkey signature rather than a plain ECDSA one.
+    bytes1 internal constant PASSKEY_SIGNATURE = 0x01;
+
     /// Long enough that a person notices an email about it before it lands.
     uint256 public constant RECOVERY_DELAY = 2 days;
 
@@ -41,11 +45,36 @@ contract SmartAccount is IOwners, IAccount4337 {
         bool exists;
     }
 
+    /**
+     * A passkey, as an owner.
+     *
+     * The device holds the private half and will not surrender it, which makes this the
+     * one credential here that survives the browser being cleared, the laptop being lost,
+     * or the user never having heard of a seed phrase. Stored as the raw P-256 point
+     * because that is what a verifier wants.
+     */
+    struct Passkey {
+        uint256 x;
+        uint256 y;
+        bool exists;
+    }
+
     address public immutable entryPoint;
     address public immutable quorum; // the identity registry's node quorum, via the factory
 
     mapping(address => bool) public isOwner;
     uint256 public ownerCount;
+
+    /// credentialId => the key behind it.
+    mapping(bytes32 => Passkey) public passkeys;
+    bytes32[] public passkeyIds;
+
+    /**
+     * Where P-256 signatures get checked. RIP-7212's precompile where a chain has it, a
+     * Solidity implementation where it does not — configuration rather than a constant,
+     * because getting it wrong means passkeys silently stop working.
+     */
+    address public p256Verifier;
     mapping(address => Session) public sessions;
     mapping(address => PendingOwner) public pending;
 
@@ -56,6 +85,9 @@ contract SmartAccount is IOwners, IAccount4337 {
     event RecoveryCompleted(address indexed owner);
     event SessionRegistered(address indexed key, uint64 expiry, uint256 spendCap);
     event SessionRevoked(address indexed key);
+    event PasskeyAdded(bytes32 indexed credentialId);
+    event PasskeyRemoved(bytes32 indexed credentialId);
+    event VerifierChanged(address indexed verifier);
 
     error NotAuthorized();
     error NotEntryPoint();
@@ -64,6 +96,9 @@ contract SmartAccount is IOwners, IAccount4337 {
     error TooEarly();
     error LastOwner();
     error CallFailed();
+    error PasskeyExists();
+    error NoSuchPasskey();
+    error NoVerifier();
 
     constructor(address entryPoint_, address quorum_, address firstOwner) {
         entryPoint = entryPoint_;
@@ -71,6 +106,62 @@ contract SmartAccount is IOwners, IAccount4337 {
         isOwner[firstOwner] = true;
         ownerCount = 1;
         emit OwnerAdded(firstOwner);
+    }
+
+    // ---- passkeys ----
+
+    /**
+     * Add a passkey as an owner.
+     *
+     * Only an existing owner can, because a passkey can do everything an owner can and
+     * granting that is an act of ownership. This is the step that turns "no seed phrase"
+     * from a slogan into something true: after it, losing this browser costs nothing.
+     */
+    function addPasskey(bytes32 credentialId, uint256 x, uint256 y) external onlySelfOrOwner {
+        if (passkeys[credentialId].exists) revert PasskeyExists();
+        passkeys[credentialId] = Passkey({x: x, y: y, exists: true});
+        passkeyIds.push(credentialId);
+        emit PasskeyAdded(credentialId);
+    }
+
+    function removePasskey(bytes32 credentialId) external onlySelfOrOwner {
+        if (!passkeys[credentialId].exists) revert NoSuchPasskey();
+        delete passkeys[credentialId];
+
+        for (uint256 i = 0; i < passkeyIds.length; i++) {
+            if (passkeyIds[i] == credentialId) {
+                passkeyIds[i] = passkeyIds[passkeyIds.length - 1];
+                passkeyIds.pop();
+                break;
+            }
+        }
+        emit PasskeyRemoved(credentialId);
+    }
+
+    function setP256Verifier(address verifier) external onlySelfOrOwner {
+        p256Verifier = verifier;
+        emit VerifierChanged(verifier);
+    }
+
+    function passkeyCount() external view returns (uint256) {
+        return passkeyIds.length;
+    }
+
+    /**
+     * Does this passkey signature authorise this operation?
+     *
+     * Public so a caller can ask before spending gas on a user operation, and so the
+     * check is testable on its own rather than only through the entry point.
+     */
+    function isValidPasskeySignature(bytes32 credentialId, bytes32 challenge, WebAuthn.Signature memory signature)
+        public
+        view
+        returns (bool)
+    {
+        Passkey memory key = passkeys[credentialId];
+        if (!key.exists) return false;
+        if (p256Verifier == address(0)) return false;
+        return WebAuthn.verify(signature, challenge, key.x, key.y, p256Verifier);
     }
 
     receive() external payable {}
@@ -157,6 +248,14 @@ contract SmartAccount is IOwners, IAccount4337 {
     {
         if (msg.sender != entryPoint) revert NotEntryPoint();
 
+        // A passkey signature is longer and structured; an ECDSA one is 65 bytes flat.
+        // The first byte says which, so neither has to be guessed at by length.
+        if (userOp.signature.length > 0 && userOp.signature[0] == PASSKEY_SIGNATURE) {
+            if (!_validPasskey(userOp.signature, userOpHash)) return INVALID;
+            _payEntryPoint(missingAccountFunds);
+            return VALID;
+        }
+
         address signer;
         // A signature over the raw hash; wallets that prefix should sign the same bytes.
         try this.recoverFor(userOpHash, userOp.signature) returns (address recovered) {
@@ -179,10 +278,35 @@ contract SmartAccount is IOwners, IAccount4337 {
             validationData = uint256(session.expiry) << 160;
         }
 
+        _payEntryPoint(missingAccountFunds);
+    }
+
+    function _payEntryPoint(uint256 missingAccountFunds) internal {
         if (missingAccountFunds > 0) {
             (bool ok,) = msg.sender.call{value: missingAccountFunds}("");
             ok; // the entry point is the judge of whether it got paid
         }
+    }
+
+    /**
+     * A passkey signature carries its own envelope: which credential, the authenticator's
+     * own bytes, the JSON the browser built, and the curve values. All of it is needed,
+     * because the challenge lives inside the JSON rather than being signed directly.
+     */
+    function _validPasskey(bytes calldata signature, bytes32 userOpHash) internal view returns (bool) {
+        (bytes32 credentialId, bytes memory authenticatorData, string memory clientDataJSON, uint256 r, uint256 s) =
+            abi.decode(signature[1:], (bytes32, bytes, string, uint256, uint256));
+
+        return isValidPasskeySignature(
+            credentialId,
+            userOpHash,
+            WebAuthn.Signature({
+                authenticatorData: authenticatorData,
+                clientDataJSON: clientDataJSON,
+                r: r,
+                s: s
+            })
+        );
     }
 
     /// External so the try/catch above can swallow a malformed signature.
