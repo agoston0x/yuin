@@ -1,75 +1,53 @@
-# Manju
+# Yuin
 
 Decentralized identity and access control for consumer apps. Trustless, no vendor lock-in, no auth code.
 
 Devs pick sign-in (trustless email OTA or Google, plus a passkey) and tiered gates (human-only, age) in a setup page. Users get a self-custodied web3 identity they can sign with, recoverable with World.
 
-See [docs/SPEC.md](docs/SPEC.md). Built at ETHGlobal Tokyo 2026.
+Read [docs/SCOPE.md](docs/SCOPE.md) for what is being built. Built at ETHGlobal Tokyo 2026.
 
-## The pivot
+## How an account happens
 
-An account now comes from an email address and a password, and nothing else. The password
-is stretched with Argon2id in the browser; `keccak(email ‖ argon2id(password))` goes on
-chain as one hash, and two independent senders must each sign before that hash becomes an
-account. Neither sender can do it alone, and both of them colluding without the password
-land on a different, empty account.
+A static page takes an email address and a password and stretches the password with
+Argon2id in the browser. `keccak(email ‖ argon2id(password))` is the identity, and it is
+the only thing that leaves the machine — so nobody here can map an identity to an address,
+because nobody here has the parts.
 
-What that replaced — a network of staked nodes reaching threshold consensus over Swarm —
-is still in the tree, marked legacy, still passing its tests. It needed five machines
-alive before one person could sign in. See [docs/PIVOT.md](docs/PIVOT.md) for what moved
-and why, including the parts that are not decentralised yet.
+Two independent senders each mail a code and each sign for the account. Neither can create
+it alone. Both colluding without the password derive a different, empty identity, which is
+why the password rather than the mailbox is what actually holds the account.
 
-## What is actually here
+Then a passkey, so losing the browser is not losing the account.
+
+## Layout
 
 | Path | What it does |
 |---|---|
-| [contracts](contracts) | The registries, the account and factory, an ENSv2 wildcard resolver. 70 tests. |
-| [senders](senders) | Two services, two keys. An account needs a signature from each. |
-| [node](node) | **Legacy.** The staked verifier: token, share, GSOC. Kept, not deployed. |
-| [signin](signin) | The static sign-in page. Google, passkey, World, email codes. Served from Swarm. |
-| [sdk](sdk) | What a developer installs: `login()`, `verify(action)`, balances, Uniswap helpers. |
-| [website](website) | Landing, the developer console, the user dashboard. |
-| [mail](mail) | One of the two independent senders behind email codes. |
-| [demos](demos) | A boilerplate app, the sake auction, the game. |
-| [scripts](scripts) | Deploy, stake the node set, register the demo apps, upload the sign-in page. |
+| [contracts](contracts) | Identity and sender registries, the 4337 account and factory, the ENSv2 resolver. |
+| [senders](senders) | One service, run twice with different keys. An account needs a signature from each. |
+| [web](web) | The landing page and the static sign-up flow. |
+| [app](app) | The developer interface: register an app, choose what it asks of its users. |
+| [sdk](sdk) | What a developer installs: login, policy checks, balances, swaps. |
+| [scripts](scripts) | Deploy, and a harness that exercises the whole path end to end. |
+| [docs](docs) | Scope, the pivot, sponsor debriefs. |
 
-## The idea in one paragraph
-
-A credential is a salted hash on chain — `keccak(issuer ‖ subject ‖ salt)` — pointing at an
-account. Nobody holds the other half, so nobody can turn an address back into a person. A
-majority of staked nodes has to agree before a credential is written, and each of them
-signs a commitment to the token they verified, so a node that attests to two different
-things about the same credential can be slashed by anyone who notices. What an app requires
-of its users is a record, not code: tick a box in the console and the next call obeys it.
+Everything before the pivot — the staked node network, GSOC, threshold signing — is on the
+`stale` branch with its tests intact. [docs/PIVOT.md](docs/PIVOT.md) says what moved and
+why.
 
 ## Running it
 
 ```bash
-# the whole pivot path against a real chain: anvil, contracts, two senders, an account
+# the whole path against a real chain: contracts, two senders, an account created
 ./scripts/e2e-pivot.sh
 
-# contracts
-cd contracts && forge test && forge build
-
-# the node set (each node is Bee + verifier + a mail sender)
-cd node && cp .env.example .env   # fill it in
-docker compose up
-
-# the pieces that run in a browser
-cd signin  && npm install && npm run build
-cd website && npm install && npm run build
-cd demos/auction && npm install && npm run build
+cd contracts && forge test
+cd senders  && npm install && npm test
+cd web      && npm install && npm run build
 ```
-
-Deployment, in order: `scripts/deploy.sh`, then `scripts/seed-nodes.sh`, then
-`scripts/register-apps.sh`, then `scripts/upload-signin.sh`. Each reads
-`scripts/.env` (see `.env.example`) and the addresses the previous one wrote.
 
 ## What we are not claiming
 
-- Nodes see the provider's token while verifying it. Privacy here is optimistic, not cryptographic; ZK-JWT removes that and is deferred, not pretended.
-- A targeted attacker who already knows someone's provider subject can confirm a guess against the registry. The salt raises the cost of a sweep; it is not a secret.
-- The node set is small and known. The registry and the slashing are what make it open later — today it is reputation.
-- IDKit needs a backend to sign `rp_context`, and that is us. We are a credential issuer, not a mapping holder, and every account is required to carry a second portable recovery path.
-
-The full list is in the spec, under [Holes and caveats](docs/SPEC.md).
+- Someone with your email **and** your password has your account, and nobody can reset it for you. That is the price of nobody being able to lock you out.
+- The Google path has no password in it, so it rests on the senders attesting a verified token. On-chain RSA verification removes that; it is not done yet.
+- A sender pays the gas for account creation. It cannot alter the call — every field is inside the signed digest — and anyone with ether can submit the same transaction instead.
