@@ -33,3 +33,28 @@
 @media(max-width:800px){.carousel{width:100%;justify-self:stretch}.slides{height:400px}.slide{padding:30px 26px}}
 
 @media(max-width:800px){.navlinks{display:none}.hero,.two .content,.three .content{grid-template-columns:1fr}.seal{width:75%;justify-self:center}.hero h1{font-size:58px}.chips{grid-template-columns:1fr}.chip{border-right:0;border-bottom:1px solid #cfc6b2}.section{padding:24px}.row{font-size:12px}.flow{gap:8px}.circle{width:60px;height:60px}}
+
+
+/* ---- /demo: one page, two gates that can be switched on and off ---- */
+.demo{min-height:100vh;padding:34px 5vw 80px;scroll-snap-align:none}
+.demo .wrap{max-width:860px;margin:0 auto}
+.panel{background:#fff;border-radius:22px;box-shadow:inset 0 0 0 1.5px #cfc6b2;padding:26px 28px;margin:26px 0}
+.panel h3{margin:0 0 4px;font-size:19px;letter-spacing:-.02em}
+.panel .muted{color:#5c5a54;font-size:15px;margin:0 0 18px}
+.switches{display:grid;gap:12px}
+.switch{display:flex;align-items:flex-start;gap:14px;cursor:pointer}
+.switch input{width:20px;height:20px;margin:2px 0 0;accent-color:#ef3e16;cursor:pointer}
+.switch b{display:block;font-size:16px}
+.switch span{display:block;color:#5c5a54;font-size:14px}
+.locked{text-align:center;padding:56px 28px}
+.locked h2{font-size:clamp(30px,3.6vw,46px);line-height:1;letter-spacing:-.04em;margin:0 0 12px}
+.locked p{color:#5c5a54;max-width:420px;margin:0 auto 26px}
+.content h2{font-size:clamp(34px,4vw,54px);line-height:1;letter-spacing:-.045em;margin:0 0 14px}
+.content p{font-size:18px;line-height:1.5;max-width:560px;color:#3b3832}
+.badge{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 15px;font-size:13px;font-weight:700;background:#1f5a3915;color:#1f5a39;margin-bottom:18px}
+.badge:before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
+.modal{position:fixed;inset:0;background:#07121680;display:grid;place-items:center;padding:24px;z-index:50}
+.modal .box{background:#f5f0e4;border-radius:24px;padding:40px;max-width:420px;width:100%;text-align:center}
+.modal h3{font-size:30px;letter-spacing:-.03em;margin:0 0 10px}
+.modal p{color:#5c5a54;margin:0 0 24px}
+.errline{color:#ef3e16;margin-top:14px;font-size:15px}
