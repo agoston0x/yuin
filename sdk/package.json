@@ -1,5 +1,5 @@
 {
-  "name": "@manju/sdk",
+  "name": "@yuin/sdk",
   "version": "0.0.0",
   "type": "module",
   "main": "dist/index.js",

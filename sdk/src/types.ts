@@ -6,7 +6,7 @@ export interface Contracts {
 }
 
 export interface ClientConfig {
-  /** The app's label — the same one that resolves as `<label>.app.manju.eth`. */
+  /** The app's label — the same one that resolves as `<label>.app.yuin.eth`. */
   app: string
   /** Where the shared sign-in page lives. One fixed origin, because passkeys are bound to one. */
   signinUrl?: string

@@ -1,12 +1,12 @@
-# Manju — Spec v5.2
+# Yuin — Spec v5.2
 
-Working title "Manju". Keep the brand out of contract and package names; it lives only in UI, ENS parent and domain.
+Working title "Yuin". Keep the brand out of contract and package names; it lives only in UI, ENS parent and domain.
 
 Decentralized sign-in for ERC-4337 smart accounts. Privy-like UX, no central identity database, no key server, no seed phrase.
 
 This file is spec v5 (the north star) plus the deltas agreed for ETHGlobal Tokyo, marked **[v5.1]** and **[v5.2]**.
 
-**[v5.2] Positioning:** Manju is a friendly identity and access-control layer for consumer apps, not a wallet. A developer picks auth methods and gates (human only, age, MFA, tiered access) in a setup page and writes no auth code. Money features (Uniswap) come second.
+**[v5.2] Positioning:** Yuin is a friendly identity and access-control layer for consumer apps, not a wallet. A developer picks auth methods and gates (human only, age, MFA, tiered access) in a setup page and writes no auth code. Money features (Uniswap) come second.
 
 ---
 
@@ -25,16 +25,16 @@ This file is spec v5 (the north star) plus the deltas agreed for ETHGlobal Tokyo
 - **[v5.2] AccountFactory** — CREATE2 per-app accounts from `(identity, appId)`, plus one personal account per identity.
 
 **[v5.2] Accounts**
-- One **global identity** per user: verified once (login credentials, World human/age), reused by every Manju app. Recovery lives here.
+- One **global identity** per user: verified once (login credentials, World human/age), reused by every Yuin app. Recovery lives here.
 - One **per-app account** per (identity, app): own keypair and address, derived by CREATE2. Apps cannot correlate users; a compromised app exposes only its own account.
-- One **personal account** used by the Manju dashboard to receive and hold funds and top up app accounts.
+- One **personal account** used by the Yuin dashboard to receive and hold funds and top up app accounts.
 
 **Swarm** — static frontends; GSOC as the keyless ephemeral channel for login requests, signature shares, and encrypted JWT blobs.
 
-**ENSv2** — `manju.eth` for protocol discovery (SDK hardcodes this, addresses resolve from it, pinnable override). `<app>.app.manju.eth` wildcard-resolved from AppRegistry; EAC grants the dev a role editing `aud`/`gateway`/`frontendHash` only — non-transferable, revoked when stake lapses. No minting, no per-name gas; the name dies with the stake.
+**ENSv2** — `yuin.eth` for protocol discovery (SDK hardcodes this, addresses resolve from it, pinnable override). `<app>.app.yuin.eth` wildcard-resolved from AppRegistry; EAC grants the dev a role editing `aud`/`gateway`/`frontendHash` only — non-transferable, revoked when stake lapses. No minting, no per-name gas; the name dies with the stake.
 - **[v5.1]** Also expose the credential policy (`loginCreds`, `stepUp`) as text records, so the SDK and anyone can read an app's rules from its name.
 
-**Manju node** — Bee + JWT verifier + chain client, shipped as one Docker container. Staked. Holds no user keys.
+**Yuin node** — Bee + JWT verifier + chain client, shipped as one Docker container. Staked. Holds no user keys.
 
 ---
 
@@ -59,7 +59,7 @@ Old owner signs the new key. Instant. No quorum, no timelock.
 Signup steps 1–5, then registration as a new owner behind timelock and veto. Same path for World ID recovery.
 
 ### Exit
-User adds any EOA as an owner and drives the account from MetaMask. Manju out of the loop.
+User adds any EOA as an owner and drives the account from MetaMask. Yuin out of the loop.
 
 ### [v5.1] Step-up verification
 1. App calls `sdk.verify(action)`.
@@ -69,11 +69,11 @@ User adds any EOA as an owner and drives the account from MetaMask. Manju out of
 
 ### [v5.2] Email OTA sign-up (weaker credential)
 1. User enters email and a password on the static page.
-2. Two independent senders each email a short code: one from Manju's mail service, one from the app's own mail service. Each publishes only `H(code‖email‖nonce)`.
+2. Two independent senders each email a short code: one from Yuin's mail service, one from the app's own mail service. Each publishes only `H(code‖email‖nonce)`.
 3. User enters both codes; page sends them to the nodes; nodes check both hashes.
-4. Identity key = `H(email-issuer‖email‖Argon2(password))`. Manju and the app colluding, without the password, land on a different, empty identity.
+4. Identity key = `H(email-issuer‖email‖Argon2(password))`. Yuin and the app colluding, without the password, land on a different, empty identity.
 5. Then secure with a passkey. Email alone may sign up; it may not recover an identity or add owners.
-6. Caveat: the app must run a mail service (and a bare-IP VPS lands in spam). Fallback: a second Manju node sends code two.
+6. Caveat: the app must run a mail service (and a bare-IP VPS lands in spam). Fallback: a second Yuin node sends code two.
 
 ---
 
@@ -103,7 +103,7 @@ Nodes can collude. They cannot do it quietly.
 ## Providers
 
 - **Google** — portable, works now.
-- **World ID** — portable; Manju sets the scope, so one identity across all Manju apps. **[v5.1]** Used via IDKit: Passport/NFC (age) and Selfie Check, as login or step-up credentials.
+- **World ID** — portable; Yuin sets the scope, so one identity across all Yuin apps. **[v5.1]** Used via IDKit: Passport/NFC (age) and Selfie Check, as login or step-up credentials.
 - **Apple / Meta** — per-app subject; recovery only from the app where added. Coming soon.
 - **GitHub** — no signed ID token, needs a server. Coming soon.
 - **[v5.1] Email** — weaker credential, see Email sign-up.
@@ -114,7 +114,7 @@ Every account must have at least one portable recovery path. Enforce it.
 
 ## [v5.1] Uniswap
 
-SDK embeds the Universal Router (+ Permit2): swap, pay in any token (exact-output swap then transfer), auto-convert on receipt. Story: one identity, one balance, any token, any Manju app. No v4 hooks (new pools have no liquidity).
+SDK embeds the Universal Router (+ Permit2): swap, pay in any token (exact-output swap then transfer), auto-convert on receipt. Story: one identity, one balance, any token, any Yuin app. No v4 hooks (new pools have no liquidity).
 
 ---
 
@@ -122,17 +122,17 @@ SDK embeds the Universal Router (+ Permit2): swap, pay in any token (exact-outpu
 
 1. Upgrade authority is a single timelocked multisig. Stated publicly.
 2. Stake will not exceed TVL early. Fraud proofs and caps carry the security.
-3. No independent watchers yet. Manju runs them at launch.
+3. No independent watchers yet. Yuin runs them at launch.
 4. Nodes see JWTs. Privacy is optimistic, not cryptographic.
 5. Untested: Apple per-app subject scoping; whether an OAuth redirect to a Swarm gateway origin registers with Google. **Test this first.**
-6. **[v5.2]** Global identity is correlatable by Manju nodes (they see credentials), not by apps (per-app accounts).
+6. **[v5.2]** Global identity is correlatable by Yuin nodes (they see credentials), not by apps (per-app accounts).
 7. **[v5.1]** Passkey is bound to the sign-in page's domain: serve the Swarm page from one fixed domain.
 
 ---
 
 ## Outlook
 
-**Phase 1** — permissioned nodes, known operators, Manju a minority among them, low caps.
+**Phase 1** — permissioned nodes, known operators, Yuin a minority among them, low caps.
 **Phase 2** — permissionless staking, caps rise with stake, slashing live, challengers paid from slashed funds.
 **Phase 3** — stake-weighted node governance replaces the multisig.
 
@@ -145,13 +145,13 @@ SDK embeds the Universal Router (+ Permit2): swap, pay in any token (exact-outpu
 ## [v5.2] Repo layout
 
 ```
-manju/
+yuin/
 ├─ contracts/        IdentityRegistry, AppRegistry, NodeRegistry, AccountFactory, ENS resolver + EAC (Foundry)
-├─ node/             Dockerfile + compose: Bee + manju node (JWT verifier, chain client, GSOC, commander)
+├─ node/             Dockerfile + compose: Bee + yuin node (JWT verifier, chain client, GSOC, commander)
 ├─ signin/           static Swarm sign-in page (email OTA, Google, passkey, World)
 ├─ sdk/              TS package: login, verify(action), accounts, Uniswap helpers
 ├─ website/          landing, dev console (stake, pick auth methods and gates), user dashboard (personal account, funds)
-├─ mail/             Manju's OTA mail sender
+├─ mail/             Yuin's OTA mail sender
 ├─ demos/
 │  ├─ boilerplate/   how to: integrate, stake, add recovery, MFA, tiered auth
 │  ├─ auction/       age to enter, selfie to bid

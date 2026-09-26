@@ -1,9 +1,9 @@
 /**
  * The whole surface an app touches.
  *
- *   const manju = await createClient({ app: 'auction' })
- *   if (!manju.session) manju.login()
- *   const gate = await manju.verify('bid')
+ *   const yuin = await createClient({ app: 'auction' })
+ *   if (!yuin.session) yuin.login()
+ *   const gate = await yuin.verify('bid')
  *
  * Four lines to a signed-in user with a smart account. What the app does not get is a
  * token, an email address, or any way to identify the person outside this app — which is

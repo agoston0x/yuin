@@ -10,7 +10,7 @@ import { createPublicClient, http, type PublicClient } from 'viem'
 import { sepolia } from 'viem/chains'
 import type { Contracts } from './types.js'
 
-export const ROOT = 'manju.eth'
+export const ROOT = 'yuin.eth'
 
 const DEFAULT_RPC = 'https://ethereum-sepolia-rpc.publicnode.com'
 
@@ -19,10 +19,10 @@ export function publicClient(rpc = DEFAULT_RPC): PublicClient {
 }
 
 const KEYS: Record<keyof Contracts, string> = {
-  nodeRegistry: 'manju.nodeRegistry',
-  appRegistry: 'manju.appRegistry',
-  identityRegistry: 'manju.identityRegistry',
-  accountFactory: 'manju.accountFactory',
+  nodeRegistry: 'yuin.nodeRegistry',
+  appRegistry: 'yuin.appRegistry',
+  identityRegistry: 'yuin.identityRegistry',
+  accountFactory: 'yuin.accountFactory',
 }
 
 export async function resolveContracts(client: PublicClient, pinned?: Partial<Contracts>): Promise<Contracts> {
@@ -38,7 +38,7 @@ export async function resolveContracts(client: PublicClient, pinned?: Partial<Co
 }
 
 export async function resolveSigninUrl(client: PublicClient): Promise<string> {
-  const url = await client.getEnsText({ name: ROOT, key: 'manju.signin' })
+  const url = await client.getEnsText({ name: ROOT, key: 'yuin.signin' })
   if (!url) throw new Error(`${ROOT} publishes no sign-in URL`)
   return url
 }

@@ -29,7 +29,7 @@ contract AppResolverTest is Test {
         registry.setPolicy(APP, Credentials.LOGIN, login);
     }
 
-    /// `\x07auction\x03app\x05manju\x03eth\x00`
+    /// `\x07auction\x03app\x05yuin\x03eth\x00`
     function dnsName() internal pure returns (bytes memory) {
         return hex"0761756374696f6e03617070056d616e6a750365746800";
     }
@@ -39,12 +39,12 @@ contract AppResolverTest is Test {
     }
 
     function test_records_come_from_the_registry() public view {
-        assertEq(resolver.textFor("auction", "manju.aud"), "client.apps.googleusercontent.com");
-        assertEq(resolver.textFor("auction", "manju.gateway"), "https://gw.example");
+        assertEq(resolver.textFor("auction", "yuin.aud"), "client.apps.googleusercontent.com");
+        assertEq(resolver.textFor("auction", "yuin.gateway"), "https://gw.example");
     }
 
     function test_the_login_policy_is_readable_as_text() public view {
-        assertEq(resolver.textFor("auction", "manju.login"), "google,world.age");
+        assertEq(resolver.textFor("auction", "yuin.login"), "google,world.age");
     }
 
     /// A user can see what an app will demand before they agree to it.
@@ -54,12 +54,12 @@ contract AppResolverTest is Test {
         vm.prank(dev);
         registry.setPolicy(APP, keccak256("bid"), kinds);
 
-        assertEq(resolver.textFor("auction", "manju.stepup.bid"), "world.selfie");
-        assertEq(resolver.textFor("auction", "manju.stepup.withdraw"), "");
+        assertEq(resolver.textFor("auction", "yuin.stepup.bid"), "world.selfie");
+        assertEq(resolver.textFor("auction", "yuin.stepup.withdraw"), "");
     }
 
     function test_wildcard_resolution_answers_for_the_label() public view {
-        bytes memory answer = resolver.resolve(dnsName(), textCall("manju.aud"));
+        bytes memory answer = resolver.resolve(dnsName(), textCall("yuin.aud"));
         assertEq(abi.decode(answer, (string)), "client.apps.googleusercontent.com");
     }
 
@@ -69,7 +69,7 @@ contract AppResolverTest is Test {
     }
 
     function test_an_unregistered_name_holds_no_records() public view {
-        assertEq(resolver.textFor("nothing", "manju.aud"), "");
+        assertEq(resolver.textFor("nothing", "yuin.aud"), "");
         assertEq(resolver.ownerOf("nothing"), address(0));
     }
 
@@ -78,15 +78,15 @@ contract AppResolverTest is Test {
         vm.prank(dev);
         registry.update(APP, "new-client-id", "https://gw2.example", bytes32(uint256(7)));
 
-        assertEq(resolver.textFor("auction", "manju.aud"), "new-client-id");
-        assertEq(resolver.textFor("auction", "manju.gateway"), "https://gw2.example");
+        assertEq(resolver.textFor("auction", "yuin.aud"), "new-client-id");
+        assertEq(resolver.textFor("auction", "yuin.gateway"), "https://gw2.example");
     }
 
     /// Retiring the app takes its name with it.
     function test_withdrawing_the_stake_empties_the_name() public {
         vm.prank(dev);
         registry.withdrawStake(APP);
-        assertEq(resolver.textFor("auction", "manju.aud"), "");
+        assertEq(resolver.textFor("auction", "yuin.aud"), "");
     }
 
     function test_it_declares_itself_a_wildcard_resolver() public view {

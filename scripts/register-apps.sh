@@ -67,4 +67,4 @@ set_policy game play world.selfie
 
 echo
 echo "done. read them back from the resolver:"
-echo "  cast call \$APP_RESOLVER 'textFor(string,string)(string)' auction manju.login --rpc-url \$SEPOLIA_RPC"
+echo "  cast call \$APP_RESOLVER 'textFor(string,string)(string)' auction yuin.login --rpc-url \$SEPOLIA_RPC"

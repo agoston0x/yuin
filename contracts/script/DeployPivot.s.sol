@@ -5,6 +5,8 @@ import {Script, console} from "forge-std/Script.sol";
 import {SenderRegistry} from "../src/SenderRegistry.sol";
 import {EmailIdentityRegistry} from "../src/EmailIdentityRegistry.sol";
 import {AccountFactory} from "../src/AccountFactory.sol";
+import {AppRegistry} from "../src/AppRegistry.sol";
+import {AppResolver} from "../src/AppResolver.sol";
 import {ISenderRegistry} from "../src/interfaces/ISenderRegistry.sol";
 import {IAccountFactory} from "../src/interfaces/IAccountFactory.sol";
 
@@ -37,10 +39,16 @@ contract DeployPivot is Script {
         EmailIdentityRegistry identities =
             new EmailIdentityRegistry(ISenderRegistry(address(senders)), IAccountFactory(address(factory)));
 
+        // The app side: what a developer registers, and the name it resolves from.
+        AppRegistry apps = new AppRegistry();
+        AppResolver resolver = new AppResolver(apps);
+
         vm.stopBroadcast();
 
         console.log("SENDER_REGISTRY=%s", address(senders));
         console.log("ACCOUNT_FACTORY=%s", address(factory));
         console.log("EMAIL_IDENTITY_REGISTRY=%s", address(identities));
+        console.log("APP_REGISTRY=%s", address(apps));
+        console.log("APP_RESOLVER=%s", address(resolver));
     }
 }

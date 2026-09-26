@@ -11,7 +11,7 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { toHex } from 'viem'
 import { secp256k1 } from '@noble/curves/secp256k1'
 
-const KEY = 'manju.session'
+const KEY = 'yuin.session'
 
 export interface StoredSession {
   privateKey: `0x${string}`

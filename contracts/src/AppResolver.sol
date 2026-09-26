@@ -68,11 +68,11 @@ contract AppResolver {
     /**
      * The record set. Keys are namespaced so an app can keep its own alongside these:
      *
-     *   manju.aud        the OAuth audience this app's users present
-     *   manju.gateway    where its node traffic goes
-     *   manju.frontend   the hash of the frontend allowed to speak for it
-     *   manju.login      credentials required to sign in, comma-separated
-     *   manju.stepup.X   credentials required for action X
+     *   yuin.aud        the OAuth audience this app's users present
+     *   yuin.gateway    where the app wants its users sent
+     *   yuin.frontend   the hash of the frontend allowed to speak for it
+     *   yuin.login      credentials required to sign in, comma-separated
+     *   yuin.stepup.X   credentials required for action X
      *
      * An unregistered app answers with empty strings rather than reverting, because that
      * is what a resolver is expected to do for a name that holds no record.
@@ -83,12 +83,12 @@ contract AppResolver {
 
         AppRegistry.App memory app = registry.appOf(appId);
 
-        if (_eq(key, "manju.aud")) return app.aud;
-        if (_eq(key, "manju.gateway")) return app.gateway;
-        if (_eq(key, "manju.frontend")) return _hex(app.frontendHash);
-        if (_eq(key, "manju.login")) return _list(registry.policyFor(appId, Credentials.LOGIN));
+        if (_eq(key, "yuin.aud")) return app.aud;
+        if (_eq(key, "yuin.gateway")) return app.gateway;
+        if (_eq(key, "yuin.frontend")) return _hex(app.frontendHash);
+        if (_eq(key, "yuin.login")) return _list(registry.policyFor(appId, Credentials.LOGIN));
 
-        bytes memory prefix = bytes("manju.stepup.");
+        bytes memory prefix = bytes("yuin.stepup.");
         bytes memory keyBytes = bytes(key);
         if (keyBytes.length > prefix.length) {
             bool matches = true;

@@ -19,7 +19,9 @@ import { argon2id } from 'hash-wasm'
 const REGISTRY = process.env.REGISTRY
 const RPC = process.env.RPC ?? 'http://127.0.0.1:8545'
 const SENDERS = ['http://127.0.0.1:8760', 'http://127.0.0.1:8761']
-const LOGS = ['/tmp/yuin-sender-one.log', '/tmp/yuin-sender-two.log']
+const LOGS = process.env.LOGS
+  ? process.env.LOGS.split(',')
+  : ['/tmp/yuin-sender-one.log', '/tmp/yuin-sender-two.log']
 
 const EMAIL = 'alice@example.com'
 const PASSWORD = 'correct horse battery staple'
