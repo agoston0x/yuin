@@ -22,6 +22,17 @@ const ACTION_AGE = process.env.NEXT_PUBLIC_WORLD_ACTION_AGE || 'age'
 const ACTION_SELFIE = process.env.NEXT_PUBLIC_WORLD_ACTION_SELFIE || 'selfie'
 const MINIMUM_AGE = Number(process.env.NEXT_PUBLIC_MINIMUM_AGE || 18)
 
+/**
+ * World's errors arrive in several shapes depending on where they were raised. Keeping
+ * the code verbatim matters more than a tidy sentence: "credential_unavailable" tells you
+ * what to do next, "Something went wrong" does not.
+ */
+function describe(e) {
+  if (!e) return 'World App did not complete the check'
+  if (typeof e === 'string') return e
+  return e.code ?? e.detail ?? e.message ?? JSON.stringify(e)
+}
+
 export default function Demo() {
   const [gates, setGates] = useState({ age: false, selfie: false })
   const [passed, setPassed] = useState({ age: false, selfie: false })
@@ -181,7 +192,8 @@ export default function Demo() {
           preset={identityCheck({ attributes: [{ type: 'minimum_age', value: MINIMUM_AGE }] })}
           handleVerify={check}
           onSuccess={() => setPassed((p) => ({ ...p, age: true }))}
-          onError={(e) => setError(e?.code ?? 'World App did not complete the check')}
+          onError={(e) => setError(describe(e))}
+          allow_legacy_proofs={false}
         />
       ) : null}
 
@@ -198,7 +210,8 @@ export default function Demo() {
             setPassed((p) => ({ ...p, selfie: true }))
             setModal(true)
           }}
-          onError={(e) => setError(e?.code ?? 'World App did not complete the check')}
+          onError={(e) => setError(describe(e))}
+          allow_legacy_proofs={false}
         />
       ) : null}
 
