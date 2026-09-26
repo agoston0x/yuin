@@ -1,61 +1,46 @@
 /**
  * Where a World proof is actually checked.
  *
- * On the server, and only on the server. A proof validated in the browser proves nothing
- * — the page that checked it is the same page that could lie about the answer. This route
- * hands the proof to World's own verifier and returns a yes or a no.
+ * On the server, and only on the server. A proof validated in the browser proves nothing:
+ * the page doing the checking is the page that could lie about the result. This hands the
+ * payload to World's own verifier and returns a yes or a no.
  *
- * What comes back is the fact of the check, never the proof itself: an app downstream
- * cannot replay it anywhere, and nothing here learns who anybody is.
+ * What comes back to the page is the fact of the check and a nullifier — the same value
+ * for the same person and the same gate, and nothing else. Not a name, not an age, not a
+ * document. An app learns that someone passed, never who they are.
  */
-const APP_ID = process.env.NEXT_PUBLIC_WORLD_APP_ID
+const RP_ID = process.env.WORLD_RP_ID
 
 export async function POST(request) {
-  if (!APP_ID || !APP_ID.startsWith('app_')) {
-    return Response.json({ ok: false, error: 'NEXT_PUBLIC_WORLD_APP_ID is not set' }, { status: 500 })
+  if (!RP_ID) {
+    return Response.json({ ok: false, error: 'WORLD_RP_ID is not set' }, { status: 500 })
   }
 
-  let body
+  let payload
   try {
-    body = await request.json()
+    payload = await request.json()
   } catch {
     return Response.json({ ok: false, error: 'expected json' }, { status: 400 })
   }
 
-  const { proof, merkle_root, nullifier_hash, verification_level, action, signal } = body ?? {}
-  if (!proof || !merkle_root || !nullifier_hash || !action) {
-    return Response.json({ ok: false, error: 'incomplete proof' }, { status: 400 })
-  }
-
-  const response = await fetch(`https://developer.worldcoin.org/api/v2/verify/${APP_ID}`, {
+  const response = await fetch(`https://developer.world.org/api/v4/verify/${RP_ID}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      proof,
-      merkle_root,
-      nullifier_hash,
-      verification_level,
-      action,
-      signal_hash: signal ?? undefined,
-    }),
+    // Forwarded unchanged: remapping fields here is how signatures get broken.
+    body: JSON.stringify(payload),
   })
 
   const result = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    // World's own words, rather than a guess at what went wrong.
+    // World's own words rather than a guess at what went wrong.
     return Response.json(
       { ok: false, error: result?.detail ?? result?.code ?? 'World refused the proof', code: result?.code },
       { status: 400 },
     )
   }
 
-  return Response.json({
-    ok: true,
-    // The nullifier is the same for the same person and the same action, and is the only
-    // durable thing here. It is not an identity; it is "this person, for this one gate".
-    nullifier: nullifier_hash,
-    level: verification_level,
-    action,
-  })
+  // A real deployment records the nullifier so one proof cannot be spent twice. Nothing
+  // is stored here, because this page is a demonstration and says so.
+  return Response.json({ ok: true, result })
 }
