@@ -1,0 +1,17 @@
+{
+  "name": "yuin-app",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 8751",
+    "build": "next build",
+    "start": "next start -p 8751"
+  },
+  "dependencies": {
+    "@worldcoin/idkit": "^2.2.2",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "viem": "^2.21.54"
+  }
+}
