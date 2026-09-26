@@ -6,12 +6,26 @@ Devs pick sign-in (trustless email OTA or Google, plus a passkey) and tiered gat
 
 See [docs/SPEC.md](docs/SPEC.md). Built at ETHGlobal Tokyo 2026.
 
+## The pivot
+
+An account now comes from an email address and a password, and nothing else. The password
+is stretched with Argon2id in the browser; `keccak(email ‖ argon2id(password))` goes on
+chain as one hash, and two independent senders must each sign before that hash becomes an
+account. Neither sender can do it alone, and both of them colluding without the password
+land on a different, empty account.
+
+What that replaced — a network of staked nodes reaching threshold consensus over Swarm —
+is still in the tree, marked legacy, still passing its tests. It needed five machines
+alive before one person could sign in. See [docs/PIVOT.md](docs/PIVOT.md) for what moved
+and why, including the parts that are not decentralised yet.
+
 ## What is actually here
 
 | Path | What it does |
 |---|---|
-| [contracts](contracts) | Three registries, the account and factory, an ENSv2 wildcard resolver. 60 tests. |
-| [node](node) | The staked verifier: checks a provider's token, signs a share, exchanges shares over GSOC. |
+| [contracts](contracts) | The registries, the account and factory, an ENSv2 wildcard resolver. 70 tests. |
+| [senders](senders) | Two services, two keys. An account needs a signature from each. |
+| [node](node) | **Legacy.** The staked verifier: token, share, GSOC. Kept, not deployed. |
 | [signin](signin) | The static sign-in page. Google, passkey, World, email codes. Served from Swarm. |
 | [sdk](sdk) | What a developer installs: `login()`, `verify(action)`, balances, Uniswap helpers. |
 | [website](website) | Landing, the developer console, the user dashboard. |
@@ -31,6 +45,9 @@ of its users is a record, not code: tick a box in the console and the next call 
 ## Running it
 
 ```bash
+# the whole pivot path against a real chain: anvil, contracts, two senders, an account
+./scripts/e2e-pivot.sh
+
 # contracts
 cd contracts && forge test && forge build
 
