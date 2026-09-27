@@ -112,31 +112,6 @@ export default function Account() {
    * and refuse when the balance will not cover it — rather than letting a transaction fail
    * on chain and leaving somebody to guess why.
    */
-  useEffect(() => {
-    let cancelled = false
-    async function run() {
-      setPayQuote(null)
-      if (!sendAmount || Number(sendAmount) <= 0 || payWith === sendToken) return
-      try {
-        const out = tokenBySymbol(sendToken)
-        const held = tokenBySymbol(payWith)
-        const amountOut = parseUnits(String(sendAmount), out.decimals)
-        const best = await bestQuoteExactOut(publicClient, {
-          tokenIn: held.native ? WETH : held.address,
-          tokenOut: out.native ? WETH : out.address,
-          amountOut,
-        })
-        if (!cancelled) setPayQuote({ ...best, amountOut, max: withHeadroom(best.amountIn, 1) })
-      } catch {
-        if (!cancelled) setPayQuote(null)
-      }
-    }
-    run()
-    return () => {
-      cancelled = true
-    }
-  }, [sendAmount, sendToken, payWith])
-
   async function fund() {
     try {
       setError('')
