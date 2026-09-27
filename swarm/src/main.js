@@ -59,6 +59,7 @@ el('start').addEventListener('submit', async (event) => {
     })
 
     if (existing !== '0x0000000000000000000000000000000000000000') {
+      session.remember(existing)
       el('account').textContent = existing
       say('')
       show('exists')
@@ -106,6 +107,7 @@ el('finish').addEventListener('submit', async (event) => {
     })
 
     state.account = result.account
+    session.remember(result.account)
     el('made').textContent = result.account
     say('')
     show('passkey')

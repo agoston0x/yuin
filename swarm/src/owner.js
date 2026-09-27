@@ -23,6 +23,19 @@ export function loadOrCreate() {
   return owner
 }
 
+/**
+ * Record which account this key controls.
+ *
+ * The key alone is not enough to do anything with: an owner key is meaningless without
+ * the account it owns, and the account page has no way to rediscover it. So the moment
+ * the account exists, the pair is stored together.
+ */
+export function remember(account) {
+  const existing = current()
+  if (!existing) throw new Error('there is no key in this browser to attach an account to')
+  localStorage.setItem(KEY, JSON.stringify({ ...existing, account }))
+}
+
 export function current() {
   const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(KEY) : null
   return raw ? JSON.parse(raw) : null
