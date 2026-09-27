@@ -16,6 +16,29 @@ import { FEES, UNISWAP, WETH } from './tokens'
 export const quoterAbi = [
   {
     type: 'function',
+    name: 'quoteExactOutputSingle',
+    stateMutability: 'nonpayable',
+    inputs: [
+      {
+        type: 'tuple',
+        components: [
+          { name: 'tokenIn', type: 'address' },
+          { name: 'tokenOut', type: 'address' },
+          { name: 'amount', type: 'uint256' },
+          { name: 'fee', type: 'uint24' },
+          { name: 'sqrtPriceLimitX96', type: 'uint160' },
+        ],
+      },
+    ],
+    outputs: [
+      { name: 'amountIn', type: 'uint256' },
+      { name: 'sqrtPriceX96After', type: 'uint160' },
+      { name: 'ticksCrossed', type: 'uint32' },
+      { name: 'gasEstimate', type: 'uint256' },
+    ],
+  },
+  {
+    type: 'function',
     name: 'quoteExactInputSingle',
     stateMutability: 'nonpayable',
     inputs: [
@@ -40,6 +63,27 @@ export const quoterAbi = [
 ]
 
 export const routerAbi = [
+  {
+    type: 'function',
+    name: 'exactOutputSingle',
+    stateMutability: 'payable',
+    inputs: [
+      {
+        type: 'tuple',
+        components: [
+          { name: 'tokenIn', type: 'address' },
+          { name: 'tokenOut', type: 'address' },
+          { name: 'fee', type: 'uint24' },
+          { name: 'recipient', type: 'address' },
+          { name: 'amountOut', type: 'uint256' },
+          { name: 'amountInMaximum', type: 'uint256' },
+          { name: 'sqrtPriceLimitX96', type: 'uint160' },
+        ],
+      },
+    ],
+    outputs: [{ name: 'amountIn', type: 'uint256' }],
+  },
+  { type: 'function', name: 'refundETH', stateMutability: 'payable', inputs: [], outputs: [] },
   {
     type: 'function',
     name: 'exactInputSingle',
@@ -162,4 +206,105 @@ export function swapCalls({ account, tokenIn, tokenOut, amountIn, amountOutMinim
 
 export function parseAmount(value, decimals) {
   return parseUnits(String(value), decimals)
+}
+
+
+/**
+ * What it would cost to buy an exact amount.
+ *
+ * The other direction from `bestQuote`: here the output is fixed — somebody is owed
+ * exactly 25 USDC — and the question is how much of something else that takes. Paying a
+ * price is not the same operation as trading, and using exact-input for it leaves the
+ * recipient short or the payer overpaying.
+ */
+export async function bestQuoteExactOut(client, { tokenIn, tokenOut, amountOut }) {
+  const results = await Promise.all(
+    FEES.map(async (fee) => {
+      try {
+        const { result } = await client.simulateContract({
+          address: UNISWAP.quoter,
+          abi: quoterAbi,
+          functionName: 'quoteExactOutputSingle',
+          args: [{ tokenIn, tokenOut, amount: amountOut, fee, sqrtPriceLimitX96: 0n }],
+        })
+        return { fee, amountIn: result[0] }
+      } catch {
+        return null
+      }
+    }),
+  )
+
+  const best = results.filter(Boolean).sort((a, b) => (a.amountIn < b.amountIn ? -1 : 1))[0]
+  if (!best) throw new Error('no pool could quote that')
+  return best
+}
+
+/** A ceiling on what may be spent. The swap clears it or reverts; it never overshoots quietly. */
+export function withHeadroom(amountIn, percent = 1) {
+  return (amountIn * BigInt(Math.round((100 + percent) * 100))) / 10000n
+}
+
+/**
+ * Pay someone in one token while holding another.
+ *
+ * Buy exactly what is owed, hand it over, and take the change back — one batch, so there
+ * is never a moment where the swap has happened and the payment has not. The recipient
+ * sees a plain transfer of the token they asked for and never learns the payer held
+ * something else.
+ */
+export function payWithCalls({
+  account,
+  recipient,
+  payToken,
+  holdToken,
+  amountOut,
+  maxIn,
+  fee,
+  fromNative,
+}) {
+  const swap = {
+    to: UNISWAP.swapRouter,
+    value: fromNative ? maxIn : 0n,
+    data: encodeFunctionData({
+      abi: routerAbi,
+      functionName: 'exactOutputSingle',
+      args: [
+        {
+          tokenIn: fromNative ? WETH : holdToken,
+          tokenOut: payToken,
+          fee,
+          recipient: account,
+          amountOut,
+          amountInMaximum: maxIn,
+          sqrtPriceLimitX96: 0n,
+        },
+      ],
+    }),
+  }
+
+  const transfer = {
+    to: payToken,
+    value: 0n,
+    data: encodeFunctionData({ abi: erc20Abi, functionName: 'transfer', args: [recipient, amountOut] }),
+  }
+
+  if (fromNative) {
+    // Exact-output takes only what it needs; the rest is sitting in the router until asked for.
+    const refund = {
+      to: UNISWAP.swapRouter,
+      value: 0n,
+      data: encodeFunctionData({ abi: routerAbi, functionName: 'refundETH', args: [] }),
+    }
+    return [swap, refund, transfer]
+  }
+
+  return [
+    {
+      to: holdToken,
+      value: 0n,
+      data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [UNISWAP.swapRouter, maxIn] }),
+    },
+    swap,
+    transfer,
+  ]
 }
