@@ -150,7 +150,7 @@ export default function Account() {
   if (!session) {
     return (
       <main className="demo">
-        <div className="wrap">
+        <div className="wrap acct">
           <div className="panel">
             <h3>No account here</h3>
             <p className="muted">
@@ -177,94 +177,105 @@ export default function Account() {
         </div>
       </nav>
 
-      <div className="wrap">
+      <div className="wrap acct">
         <div className="panel">
           <h3>Your account</h3>
           <p className="muted">
-            Send anything to this address. It is yours, and nobody — including us — can
-            move what is in it.
+            Send anything here. It is yours, and nobody — including us — can move what is
+            in it.
           </p>
-          <div className="out">{session.account}</div>
-
-          <div className="gate" style={{ marginTop: 20 }}>
-            {rows.map((row) => (
-              <div className="row" key={row.symbol}>
-                <div>
-                  <b>{row.symbol}</b>
-                  <span>{row.native ? 'native' : row.address}</span>
-                </div>
-                <div>{Number(row.formatted).toFixed(row.decimals === 6 ? 2 : 5)}</div>
-              </div>
-            ))}
+          <div className="addr">
+            <code>{session.account}</code>
+            <button onClick={() => navigator.clipboard.writeText(session.account)}>Copy</button>
           </div>
+
+          <ul className="bal">
+            {rows.map((row) => (
+              <li key={row.symbol}>
+                <span className="sym">{row.symbol}</span>
+                <span className={Number(row.formatted) === 0 ? 'amt zero' : 'amt'}>
+                  {Number(row.formatted).toFixed(row.decimals === 6 ? 2 : 5)}
+                </span>
+              </li>
+            ))}
+          </ul>
 
           {gas === 0n ? (
             <>
-              <p className="muted" style={{ marginTop: 18 }}>
-                Your key has no gas yet, so it cannot move anything. Yuin will cover it for
-                the demo — a paymaster does this properly later.
-              </p>
-              <button className="btn" onClick={fund} disabled={Boolean(busy)}>
+              <div className="gasnote">
+                <span>
+                  Your key has no gas, so it cannot move anything yet. Yuin covers it for the
+                  demo — a paymaster does this properly later.
+                </span>
+              </div>
+              <button className="btn" style={{ marginTop: 14 }} onClick={fund} disabled={Boolean(busy)}>
                 {busy || 'Get some gas →'}
               </button>
             </>
           ) : (
-            <p className="hint" style={{ marginTop: 16 }}>
-              Key gas: {Number(formatUnits(gas, 18)).toFixed(5)} ETH
+            <p className="hint" style={{ marginTop: 14, marginBottom: 0 }}>
+              Key gas {Number(formatUnits(gas, 18)).toFixed(5)} ETH
             </p>
           )}
         </div>
 
         <div className="panel">
           <h3>Swap</h3>
-          <p className="muted">
-            Straight through Uniswap, from the account itself. Best of three pools.
-          </p>
-          <div className="stack">
+          <p className="muted">Straight through Uniswap, from the account itself.</p>
+
+          <div className="swapbox">
             <select value={from} onChange={(e) => setFrom(e.target.value)}>
               {TOKENS.map((t) => (
                 <option key={t.symbol}>{t.symbol}</option>
               ))}
             </select>
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} style={{ flex: 1 }} />
+            <span className="to">→</span>
             <select value={to} onChange={(e) => setTo(e.target.value)}>
               {TOKENS.map((t) => (
                 <option key={t.symbol}>{t.symbol}</option>
               ))}
             </select>
           </div>
-          <p className="hint">
-            {quote
-              ? `→ ${Number(formatUnits(quote.amountOut, outToken.decimals)).toFixed(4)} ${to} (${quote.fee / 10000}% pool)`
-              : 'no quote'}
-          </p>
+
+          <input
+            className="amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.001"
+            style={{ width: '100%', padding: '13px 12px', border: '1.5px solid #cfc6b2', borderRadius: 12, background: '#f5f0e4', font: 'inherit', marginBottom: 12 }}
+          />
+
+          <div className="rate">
+            {quote ? (
+              <>
+                <b>
+                  {Number(formatUnits(quote.amountOut, outToken.decimals)).toFixed(4)} {to}
+                </b>
+                <span className="dim">best of three pools · {quote.fee / 10000}% fee tier</span>
+              </>
+            ) : (
+              <span className="dim">Enter an amount for a quote.</span>
+            )}
+          </div>
+
           <button className="btn" onClick={swap} disabled={!quote || Boolean(busy) || gas === 0n}>
-            {busy || 'Swap →'}
+            {busy || `Swap ${from} for ${to} →`}
           </button>
         </div>
 
         <div className="panel">
           <h3>Send</h3>
           <p className="muted">Out of the account, to anyone.</p>
-          <div className="stack">
-            <select value={sendToken} onChange={(e) => setSendToken(e.target.value)}>
-              {TOKENS.map((t) => (
-                <option key={t.symbol}>{t.symbol}</option>
-              ))}
-            </select>
-            <input
-              placeholder="amount"
-              value={sendAmount}
-              onChange={(e) => setSendAmount(e.target.value)}
-              style={{ width: 120 }}
-            />
-            <input
-              placeholder="0x…"
-              value={sendTo}
-              onChange={(e) => setSendTo(e.target.value)}
-              spellCheck={false}
-              style={{ flex: 1, minWidth: 200 }}
-            />
+          <div className="sendrow">
+            <div className="pair">
+              <select value={sendToken} onChange={(e) => setSendToken(e.target.value)}>
+                {TOKENS.map((t) => (
+                  <option key={t.symbol}>{t.symbol}</option>
+                ))}
+              </select>
+              <input placeholder="amount" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} />
+            </div>
+            <input placeholder="0x…" value={sendTo} spellCheck={false} onChange={(e) => setSendTo(e.target.value)} />
           </div>
           <button className="btn" onClick={send} disabled={Boolean(busy) || gas === 0n}>
             {busy || 'Send →'}
