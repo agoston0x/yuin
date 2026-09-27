@@ -19,6 +19,8 @@ input{width:100%;padding:13px 15px;margin:0 0 10px;border:1.5px solid #cfc6b2;bo
 button{width:100%;padding:14px 20px;border:0;border-radius:999px;background:#071216;color:#f5f0e4;
   font:inherit;font-weight:700;cursor:pointer}
 button:disabled{opacity:.45;cursor:default}
+.go{display:block;text-align:center;padding:14px 20px;border-radius:999px;background:#071216;
+  color:#f5f0e4;font-weight:700;text-decoration:none;margin-top:6px}
 code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;color:#071216}
 .out{background:#071216;color:#f5f0e4;border-radius:12px;padding:14px;margin:0 0 16px;
   font:12px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
@@ -72,6 +74,7 @@ code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;
     <div class="out" id="done-account"></div>
     <p>An account with two ways in and no seed phrase. Nobody — including us — can lock you
        out of it, or tell anyone it is yours.</p>
+    <a class="go" href="/account">Open your account</a>
   </div>
 
   <div class="step card" id="exists" hidden>
@@ -79,6 +82,7 @@ code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;
     <div class="out" id="account"></div>
     <p>Which is the proof nothing was stored: the same email and password produce the same
        account, on any device, forever.</p>
+    <a class="go" href="/account">Open your account</a>
   </div>
 
   <p id="status"></p>
